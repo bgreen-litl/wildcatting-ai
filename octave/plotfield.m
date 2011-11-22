@@ -1,5 +1,5 @@
 function [] = plotfield(Field)
-    colormap(gray);
+    colormap("default");
 
     h = imagesc(Field, [-1 1]);
     axis image off;
