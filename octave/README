@@ -1,0 +1,8 @@
+Usage:
+
+> A=load("q_surveying_data_1.txt");
+> [Prob, Cost, Util] = unwind(A);
+
+This leaves you with 24x80 matrices Prob, Cost, and Util.
+
+> plotfield(Prob);
