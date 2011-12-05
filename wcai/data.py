@@ -24,7 +24,6 @@ class FieldWriter:
         maxdc = self.theme.getMaxDrillCost()
         mintax = self.theme.getMinTax()
         maxtax = self.theme.getMaxTax()
-        input = self.args.inputs
 
         for row in xrange(self.args.height):
             for col in xrange(self.args.width):
@@ -55,8 +54,6 @@ class FieldWriter:
             res_filler.fill(oil_field)
             cost_filler.fill(oil_field)
             tax_filler.fill(oil_field)
-
-            oil_price = self.theme.getOilPrices().next()
 
             self.write_input(oil_field, out)
 
