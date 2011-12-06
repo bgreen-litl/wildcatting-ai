@@ -13,7 +13,7 @@ log = logging.getLogger("wildcatting-ai")
 class OilPriceCommand:
     @classmethod
     def add_subparser(cls, parser):
-        subparser = parser.add_parser("oilprice", 
+        subparser = parser.add_parser("oilprice",
                                       help="Generate oil price data")
         subparser.add_argument("--weeks", default=52, type=int,
                                help="number of weeks to generate prices")
