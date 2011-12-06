@@ -3,7 +3,8 @@ import sys
 
 from wildcatting.theme import DefaultTheme
 
-from .data import FieldWriter, UtilityEstimator
+from .data import OilPresence, OilReserves, ReservoirSize, OilValue, \
+    UtilityEstimator, FieldWriter
 
 
 log = logging.getLogger("wildcatting-ai")
@@ -25,8 +26,10 @@ class FieldCommand:
         subparser.add_argument("--inputs", choices=['prob', 'cost', 'tax'],
                                nargs='+', default=['prob', 'cost'],
                                help="input fields")
-        subparser.add_argument("--outputs", choices=['utility'],
-                               nargs='+', default='util',
+        subparser.add_argument("--outputs", choices=['wet', 'bbl',
+                                                    'size', 'val',
+                                                    'util'],
+                               nargs='+', default='wet',
                                help="output fields")
         subparser.add_argument("--file", type=str, default=None,
                                help="write to specified file")
@@ -36,8 +39,19 @@ class FieldCommand:
     @staticmethod
     def run(args):
         theme = DefaultTheme()
-        val_func = UtilityEstimator(theme, args.width * args.height)
-        fw = FieldWriter(args, theme, val_func)
+        val_funcs = []
+        if 'wet' in args.outputs:
+            val_funcs.append(OilPresence(theme, args.width * args.height))
+        if 'bbl' in args.outputs:
+            val_funcs.append(OilReserves(theme, args.width * args.height))
+        if 'size' in args.outputs:
+            val_funcs.append(ReservoirSize(theme, args.width * args.height))
+        if 'val' in args.outputs:
+            val_funcs.append(OilValue(theme, args.width * args.height))
+        if 'util' in args.outputs:
+            val_funcs.append(UtilityEstimator(theme, args.width * args.height))
+
+        fw = FieldWriter(args, theme, val_funcs)
         if args.file:
             with open(args.file, 'w') as f:
                 fw.write(f)
