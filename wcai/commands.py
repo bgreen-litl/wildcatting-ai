@@ -19,12 +19,13 @@ class FieldCommand:
                                help="oil field height")
         subparser.add_argument("--num", default=1,  type=int,
                                help="number of fields to generate")
+        subparser.add_argument("--no-headers", action="store_true")
         subparser.add_argument("--delim", default=" ", type=str,
                                help="ascii delimiter")
         subparser.add_argument("--inputs", choices=['prob', 'cost', 'tax'],
                                nargs='+', default=['prob', 'cost'],
                                help="input fields")
-        subparser.add_argument("--output", choices=['utility'],
+        subparser.add_argument("--outputs", choices=['utility'],
                                nargs='+', default='util',
                                help="output fields")
         subparser.add_argument("--file", type=str, default=None,
