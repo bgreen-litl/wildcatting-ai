@@ -25,7 +25,7 @@ class FieldCommand:
                                nargs='+', default=['prob', 'cost'],
                                help="input fields")
         subparser.add_argument("--output", choices=['utility'],
-                               default='util',
+                               nargs='+', default='util',
                                help="output fields")
         subparser.add_argument("--file", type=str, default=None,
                                help="write to specified file")
@@ -35,7 +35,8 @@ class FieldCommand:
     @staticmethod
     def run(args):
         theme = DefaultTheme()
-        fw = FieldWriter(args, theme, UtilityEstimator(theme))
+        val_func = UtilityEstimator(theme, args.width * args.height)
+        fw = FieldWriter(args, theme, val_func)
         if args.file:
             with open(args.file, 'w') as f:
                 fw.write(f)
