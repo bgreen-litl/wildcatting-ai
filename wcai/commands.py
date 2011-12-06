@@ -66,6 +66,8 @@ class FieldCommand:
                                                     'util'],
                                nargs='+', default='wet',
                                help="output fields")
+        subparser.add_argument("--normalize", action="store_true",
+                               default=False, help="normalize between 0 and 1")
         subparser.add_argument("--file", type=str, default=None,
                                help="write to specified file")
 

@@ -18,6 +18,12 @@ class FieldWriter:
         self.theme = theme
         self.val_funcs = val_funcs
 
+    def val(self, val, min_val, max_val):
+        if self.args.normalize:
+            return normalize(val, min_val, max_val)
+        else:
+            return val
+
     def write_headers(self, site_ct, out):
         for i in xrange(site_ct):
             if 'prob' in self.args.inputs:
@@ -43,13 +49,13 @@ class FieldWriter:
                 prob = cost = tax = ""
                 if 'prob' in self.args.inputs:
                     p = site.getProbability()
-                    prob = "%s%s" % (normalize(p, 0, 100), delim)
+                    prob = "%s%s" % (self.val(p, 0, 100), delim)
                 if 'cost' in self.args.inputs:
                     dc = site.getDrillCost()
-                    cost = "%s%s" % (normalize(dc, mindc, maxdc), delim)
+                    cost = "%s%s" % (self.val(dc, mindc, maxdc), delim)
                 if 'tax' in self.args.inputs:
                     t = site.getTax()
-                    tax = "%s%s" % (normalize(t, mintax, maxtax), delim)
+                    tax = "%s%s" % (self.val(t, mintax, maxtax), delim)
                 out.write("%s%s%s" % (prob, cost, tax))
 
     def write_output(self, field, out):
