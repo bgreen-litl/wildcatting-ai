@@ -4,10 +4,45 @@ import sys
 from wildcatting.theme import DefaultTheme
 
 from .data import OilPresence, OilReserves, ReservoirSize, OilValue, \
-    UtilityEstimator, FieldWriter
+    UtilityEstimator, FieldWriter, normalize
 
 
 log = logging.getLogger("wildcatting-ai")
+
+
+class OilPriceCommand:
+    @classmethod
+    def add_subparser(cls, parser):
+        subparser = parser.add_parser("oilprice", 
+                                      help="Generate oil price data")
+        subparser.add_argument("--weeks", default=52, type=int,
+                               help="number of weeks to generate prices")
+        subparser.add_argument("--normalize", action="store_true",
+                               default=False, help="normalize between 0 and 1")
+        subparser.add_argument("--file", type=str, default=None,
+                               help="write to specified file")
+
+        subparser.set_defaults(run=cls.run)
+
+    @staticmethod
+    def write(args, out):
+        theme = DefaultTheme()
+        prices = theme.getOilPrices()
+        oil_min = prices._minPrice
+        oil_max = prices._maxPrice
+        for i in xrange(args.weeks):
+            price = theme.getOilPrices().next()
+            if args.normalize:
+                price = normalize(price, oil_min, oil_max)
+            out.write('%s\n' % price)
+
+    @staticmethod
+    def run(args):
+        if args.file:
+            with open(args.file, 'w') as f:
+                OilPriceCommand.write(args, f)
+        else:
+            OilPriceCommand.write(args, sys.stdout)
 
 
 class FieldCommand:

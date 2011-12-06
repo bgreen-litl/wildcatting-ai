@@ -11,6 +11,7 @@ parser.add_argument("--debug", action="store_true", help=argparse.SUPPRESS)
 
 subparsers = parser.add_subparsers(title="Commands")
 commands.FieldCommand.add_subparser(subparsers)
+commands.OilPriceCommand.add_subparser(subparsers)
 
 
 def main():
