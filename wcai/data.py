@@ -13,56 +13,29 @@ def normalize(val, min_val, max_val):
 
 
 class FieldWriter:
-    def __init__(self, args, theme, val_funcs):
+    def __init__(self, args, theme, ins, outs):
         self.args = args
         self.theme = theme
-        self.val_funcs = val_funcs
-
-    def val(self, val, min_val, max_val):
-        if self.args.normalize:
-            return normalize(val, min_val, max_val)
-        else:
-            return val
+        self.ins = ins
+        self.outs = outs
 
     def write_headers(self, site_ct, out):
-        for i in xrange(site_ct):
-            if 'prob' in self.args.inputs:
-                out.write("PROB_%s%s" % (i, self.args.delim))
-            if 'cost' in self.args.inputs:
-                out.write("COST_%s%s" % (i, self.args.delim))
-            if 'tax' in self.args.inputs:
-                out.write("TAX_%s%s" % (i, self.args.delim))
+        # inputs
+        for site in xrange(site_ct):
+            for i in self.ins:
+                out.write("%s_%s%s" % (i.header.upper(), site,
+                                       self.args.delim))
+        # outputs
+        for site in xrange(site_ct):
+            for o in self.outs:
+                out.write("%s_%s%s" % (o.header.upper(), site,
+                                       self.args.delim))
 
-        for i in xrange(site_ct):
-            for vf in self.val_funcs:
-                out.write("%s_%s%s" % (vf.header, i, self.args.delim))
-
-    def write_input(self, field, out):
-        delim = self.args.delim
-        mindc = self.theme.getMinDrillCost()
-        maxdc = self.theme.getMaxDrillCost()
-        mintax = self.theme.getMinTax()
-        maxtax = self.theme.getMaxTax()
-        for row in xrange(self.args.height):
-            for col in xrange(self.args.width):
+    def write_values(self, field, val_funcs, out):
+        for row in xrange(field.getHeight()):
+            for col in xrange(field.getWidth()):
                 site = field.getSite(row, col)
-                prob = cost = tax = ""
-                if 'prob' in self.args.inputs:
-                    p = site.getProbability()
-                    prob = "%s%s" % (self.val(p, 0, 100), delim)
-                if 'cost' in self.args.inputs:
-                    dc = site.getDrillCost()
-                    cost = "%s%s" % (self.val(dc, mindc, maxdc), delim)
-                if 'tax' in self.args.inputs:
-                    t = site.getTax()
-                    tax = "%s%s" % (self.val(t, mintax, maxtax), delim)
-                out.write("%s%s%s" % (prob, cost, tax))
-
-    def write_output(self, field, out):
-        for row in xrange(self.args.height):
-            for col in xrange(self.args.width):
-                site = field.getSite(row, col)
-                for vf in self.val_funcs:
+                for vf in val_funcs:
                     out.write("%s%s" % (vf.value(site), self.args.delim))
 
     def write(self, out):
@@ -83,19 +56,52 @@ class FieldWriter:
             cost_filler.fill(field)
             tax_filler.fill(field)
 
-            self.write_input(field, out)
-            self.write_output(field, out)
+            self.write_values(field, self.ins, out)
+            self.write_values(field, self.outs, out)
             out.write('\n')
 
 
 class ValueFunction:
-    def __init__(self, theme, site_ct):
+    def __init__(self, theme, site_ct, normalize=False):
         self.theme = theme
         self.site_ct = site_ct
+        self.normalize = normalize
 
 
+class OilProbability(ValueFunction):
+    header = "prob"
+
+    def value(self, site):
+        prob = site.getProbability()
+        if self.normalize:
+            prob = normalize(prob, 0.0, 100.0)
+        return prob
+
+
+class DrillCost(ValueFunction):
+    header = "cost"
+
+    def value(self, site):
+        cost = site.getDrillCost()
+        if self.normalize:
+            cost = normalize(cost, self.theme.getMinDrillCost(),
+                             self.theme.getMaxDrillCost())
+        return cost
+
+
+class Taxes(ValueFunction):
+    header = "tax"
+
+    def value(self, site):
+        tax = site.getTax()
+        if self.normalize:
+            tax = normalize(tax, self.theme.getMinTax(),
+                            self.theme.getMaxTax())
+
+
+# TODO normalization
 class OilValue(ValueFunction):
-    header = "VAL"
+    header = "val"
 
     def value(self, site):
         price = self.theme.getOilPrices()._price
@@ -106,8 +112,9 @@ class OilValue(ValueFunction):
         return price * reserves
 
 
+# TODO normalization
 class OilReserves(ValueFunction):
-    header = "BBL"
+    header = "bbl"
 
     def value(self, site):
         reserves = 0
@@ -118,14 +125,15 @@ class OilReserves(ValueFunction):
 
 
 class OilPresence(ValueFunction):
-    header = "WET"
+    header = "wet"
 
     def value(self, site):
         return 0 if site.getReservoir() is None else 1
 
 
+# TODO normalization
 class ReservoirSize(ValueFunction):
-    header = "SIZE"
+    header = "size"
 
     def value(self, site):
         size = 0

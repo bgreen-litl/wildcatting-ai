@@ -3,8 +3,9 @@ import sys
 
 from wildcatting.theme import DefaultTheme
 
-from .data import OilPresence, OilReserves, ReservoirSize, OilValue, \
-    UtilityEstimator, FieldWriter, normalize
+from .data import (OilProbability, DrillCost, Taxes, OilPresence, OilReserves,
+                   ReservoirSize, OilValue, UtilityEstimator, FieldWriter,
+                   normalize)
 
 
 log = logging.getLogger("wildcatting-ai")
@@ -46,6 +47,11 @@ class OilPriceCommand:
 
 
 class FieldCommand:
+
+    val_map = {'prob': OilProbability, 'cost': DrillCost, 'tax': Taxes,
+               'wet': OilPresence, 'bbl': OilReserves, 'size': ReservoirSize,
+               'val': OilValue, 'util': UtilityEstimator}
+
     @classmethod
     def add_subparser(cls, parser):
         subparser = parser.add_parser("field", help="Generate oil field data")
@@ -58,14 +64,12 @@ class FieldCommand:
         subparser.add_argument("--no-headers", action="store_true")
         subparser.add_argument("--delim", default=" ", type=str,
                                help="ascii delimiter")
-        subparser.add_argument("--inputs", choices=['prob', 'cost', 'tax'],
+        subparser.add_argument("--inputs", choices=FieldCommand.val_map.keys(),
                                nargs='+', default=['prob', 'cost'],
                                help="input fields")
-        subparser.add_argument("--outputs", choices=['wet', 'bbl',
-                                                    'size', 'val',
-                                                    'util'],
-                               nargs='+', default='wet',
-                               help="output fields")
+        subparser.add_argument("--outputs",
+                               choices=FieldCommand.val_map.keys(), nargs='+',
+                               default=['wet'], help="output fields")
         subparser.add_argument("--normalize", action="store_true",
                                default=False, help="normalize between 0 and 1")
         subparser.add_argument("--file", type=str, default=None,
@@ -76,19 +80,21 @@ class FieldCommand:
     @staticmethod
     def run(args):
         theme = DefaultTheme()
-        val_funcs = []
-        if 'wet' in args.outputs:
-            val_funcs.append(OilPresence(theme, args.width * args.height))
-        if 'bbl' in args.outputs:
-            val_funcs.append(OilReserves(theme, args.width * args.height))
-        if 'size' in args.outputs:
-            val_funcs.append(ReservoirSize(theme, args.width * args.height))
-        if 'val' in args.outputs:
-            val_funcs.append(OilValue(theme, args.width * args.height))
-        if 'util' in args.outputs:
-            val_funcs.append(UtilityEstimator(theme, args.width * args.height))
 
-        fw = FieldWriter(args, theme, val_funcs)
+        ins = []
+        print args.inputs
+        for i in args.inputs:
+            ins.append(FieldCommand.val_map[i](theme,
+                                               args.width * args.height,
+                                               args.normalize))
+        outs = []
+        print args.outputs
+        for o in args.outputs:
+            outs.append(FieldCommand.val_map[o](theme,
+                                                args.width * args.height,
+                                                args.normalize))
+
+        fw = FieldWriter(args, theme, ins, outs)
         if args.file:
             with open(args.file, 'w') as f:
                 fw.write(f)
