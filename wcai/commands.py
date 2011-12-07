@@ -72,6 +72,8 @@ class FieldCommand:
                                default=['wet'], help="output fields")
         subparser.add_argument("--normalize", action="store_true",
                                default=False, help="normalize between 0 and 1")
+        subparser.add_argument("--reduce", type=int, default=1,
+                               help="scale down by the specified factor")
         subparser.add_argument("--file", type=str, default=None,
                                help="write to specified file")
 
@@ -82,13 +84,11 @@ class FieldCommand:
         theme = DefaultTheme()
 
         ins = []
-        print args.inputs
         for i in args.inputs:
             ins.append(FieldCommand.val_map[i](theme,
                                                args.width * args.height,
                                                args.normalize))
         outs = []
-        print args.outputs
         for o in args.outputs:
             outs.append(FieldCommand.val_map[o](theme,
                                                 args.width * args.height,

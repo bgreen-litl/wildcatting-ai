@@ -1,15 +1,89 @@
+import math
 import random
 
 from wildcatting.model import OilField
 from wildcatting.game import OilFiller, DrillCostFiller, TaxFiller, \
                              PotentialOilDepthFiller, ReservoirFiller
 
-
 rnd = random.Random()
 
 
 def normalize(val, min_val, max_val):
     return (val - min_val) / float(max_val - min_val)
+
+
+class Region:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.sites = []
+
+    def __str__(self):
+        str_ = ""
+        for i, s in enumerate(self.sites):
+            str_ += ("%0.0f " % (s['prob']))
+            if (i + 1) % self.width == 0:
+                str_ += "\n"
+        return str_
+
+    @staticmethod
+    def map(field, val_funcs=[]):
+        region = Region(field.getWidth(), field.getHeight())
+        for row in xrange(field.getHeight()):
+            for col in xrange(field.getWidth()):
+                site = field.getSite(row, col)
+                vals = {'prob': site.getProbability(),
+                        'cost': site.getDrillCost(),
+                        'tax': site.getTax()}
+                for vf in val_funcs:
+                    vals[vf.header.lower()] = vf.value(site)
+                region.sites.append(vals)
+        return region
+
+    @staticmethod
+    def avgs(x, y, w, h, region, val_funcs):
+        avgs = {}
+        for vf in val_funcs:
+            avgs[vf.header] = 0
+
+        x_range = int(math.ceil(x + w) - math.floor(x))
+        y_range = int(math.ceil(y + h) - math.floor(y))
+        for row in xrange(y_range):
+            for col in xrange(x_range):
+                site = region.site(int(math.floor(y)) + row,
+                                   int(math.floor(x)) + col)
+                for vf in val_funcs:
+                    avgs[vf.header] += site[vf.header]
+
+        area = x_range * y_range
+        for tot in avgs.keys():
+            avgs[tot] /= area
+        return avgs
+
+    @staticmethod
+    def reduce(region, kw, kh, val_funcs):
+        # create a reduced region of size k (kw, kh)
+        reduction = Region(kw, kh)
+        # define the dimensions of the rectangle in the field
+        fw = 2.0 * region.width / (kw + 1.0)
+        fh = 2.0 * region.height / (kh + 1.0)
+        # offsets between overlapped subregions
+        ox, oy = fw / 2.0, fh / 2.0
+        # iterate across the overlapping regions
+        fy = -oy
+        for y in xrange(kh):
+            fy += oy
+            fx = -ox
+            for x in xrange(kw):
+                fx += ox
+                avgs = Region.avgs(fx, fy, fw, fh, region, val_funcs)
+                reduction.sites.append(avgs)
+
+        return reduction
+
+    def site(self, row, col):
+        site = self.sites[row * self.width + col]
+        return site
 
 
 class FieldWriter:
@@ -31,12 +105,12 @@ class FieldWriter:
                 out.write("%s_%s%s" % (o.header.upper(), site,
                                        self.args.delim))
 
-    def write_values(self, field, val_funcs, out):
-        for row in xrange(field.getHeight()):
-            for col in xrange(field.getWidth()):
-                site = field.getSite(row, col)
+    def write_values(self, region, val_funcs, out):
+        for row in xrange(region.height):
+            for col in xrange(region.width):
+                site = region.site(row, col)
                 for vf in val_funcs:
-                    out.write("%s%s" % (vf.value(site), self.args.delim))
+                    out.write("%s%s" % (site[vf.header], self.args.delim))
 
     def write(self, out):
         oil_filler = OilFiller(self.theme)
@@ -56,8 +130,16 @@ class FieldWriter:
             cost_filler.fill(field)
             tax_filler.fill(field)
 
-            self.write_values(field, self.ins, out)
-            self.write_values(field, self.outs, out)
+            val_funcs = self.ins + self.outs
+            region = Region.map(field, val_funcs)
+            if self.args.reduce != 1:
+                region = Region.reduce(region,
+                                       region.width / self.args.reduce,
+                                       region.height / self.args.reduce,
+                                       val_funcs)
+
+            self.write_values(region, self.ins, out)
+            self.write_values(region, self.outs, out)
             out.write('\n')
 
 
@@ -128,7 +210,7 @@ class OilPresence(ValueFunction):
     header = "wet"
 
     def value(self, site):
-        return 0 if site.getReservoir() is None else 1
+        return 0.0 if site.getReservoir() is None else 1.0
 
 
 # TODO normalization
@@ -154,7 +236,7 @@ class ReservoirSize(ValueFunction):
 ## sense this estimate should do a decent job predicting better or worse
 ## sites to survey
 class UtilityEstimator(ValueFunction):
-    header = "UTIL"
+    header = "util"
 
     def value(self, site):
         price = self.theme.getOilPrices()._price
