@@ -5,7 +5,7 @@ all:
 	@echo 'check    run a full suite of tests'
 
 develop:
-	virtualenv --no-site-packages virtualenv
+	virtualenv virtualenv
 	sh virtualenv-run.sh python setup.py develop
 
 check: pep8 pyflakes test
