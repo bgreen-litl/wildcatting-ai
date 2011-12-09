@@ -6,14 +6,12 @@ import sys
 
 from . import commands
 
-parser = argparse.ArgumentParser(description="wcai control")
+parser = argparse.ArgumentParser(description="wildcatting-ai control")
 parser.add_argument("--debug", action="store_true", help=argparse.SUPPRESS)
 
 subparsers = parser.add_subparsers(title="Commands")
-commands.InitCommand.add_subparser(subparsers)
-commands.BootstrapCommand.add_subparser(subparsers)
-commands.LearnCommand.add_subparser(subparsers)
-commands.PlayCommand.add_subparser(subparsers)
+commands.FieldCommand.add_subparser(subparsers)
+commands.OilPriceCommand.add_subparser(subparsers)
 
 
 def main():
@@ -34,7 +32,6 @@ def main():
     except KeyboardInterrupt:
         print
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

@@ -1,102 +1,76 @@
 import logging
-import sys
 
-from wildcatting.theme import DefaultTheme
-
-from .data import (OilProbability, DrillCost, Taxes, OilPresence, OilReserves,
-                   ReservoirSize, OilValue, UtilityEstimator, FieldWriter,
-                   normalize)
+from .agent import Agent, Surveying, Report, Drilling, Sales
 
 
-log = logging.getLogger("wildcatting-ai")
+log = logging.getLogger("wcai")
+
+components = dict([(c.name, c) for c in [Surveying, Report, Drilling, Sales]])
 
 
-class OilPriceCommand:
-    @classmethod
-    def add_subparser(cls, parser):
-        subparser = parser.add_parser("oilprice",
-                                      help="Generate oil price data")
-        subparser.add_argument("--weeks", default=52, type=int,
-                               help="number of weeks to generate prices")
-        subparser.add_argument("--normalize", action="store_true",
-                               default=False, help="normalize between 0 and 1")
-        subparser.add_argument("--file", type=str, default=None,
-                               help="write to specified file")
-
-        subparser.set_defaults(run=cls.run)
-
-    @staticmethod
-    def write(args, out):
-        theme = DefaultTheme()
-        prices = theme.getOilPrices()
-        oil_min = prices._minPrice
-        oil_max = prices._maxPrice
-        for i in xrange(args.weeks):
-            price = theme.getOilPrices().next()
-            if args.normalize:
-                price = normalize(price, oil_min, oil_max)
-            out.write('%s\n' % price)
-
-    @staticmethod
-    def run(args):
-        if args.file:
-            with open(args.file, 'w') as f:
-                OilPriceCommand.write(args, f)
-        else:
-            OilPriceCommand.write(args, sys.stdout)
-
-
-class FieldCommand:
-
-    val_map = {'prob': OilProbability, 'cost': DrillCost, 'tax': Taxes,
-               'wet': OilPresence, 'bbl': OilReserves, 'size': ReservoirSize,
-               'val': OilValue, 'util': UtilityEstimator}
+class InitCommand:
 
     @classmethod
     def add_subparser(cls, parser):
-        subparser = parser.add_parser("field", help="Generate oil field data")
-        subparser.add_argument("--width", default=80, type=int,
-                               help="oil field width")
-        subparser.add_argument("--height", default=24, type=int,
-                               help="oil field height")
-        subparser.add_argument("--num", default=1,  type=int,
-                               help="number of fields to generate")
-        subparser.add_argument("--no-headers", action="store_true")
-        subparser.add_argument("--delim", default=" ", type=str,
-                               help="ascii delimiter")
-        subparser.add_argument("--inputs", choices=FieldCommand.val_map.keys(),
-                               nargs='+', default=['prob', 'cost'],
-                               help="input fields")
-        subparser.add_argument("--outputs",
-                               choices=FieldCommand.val_map.keys(), nargs='+',
-                               default=['wet'], help="output fields")
-        subparser.add_argument("--normalize", action="store_true",
-                               default=False, help="normalize between 0 and 1")
-        subparser.add_argument("--reduce", type=int, default=1,
-                               help="scale down by the specified factor")
-        subparser.add_argument("--file", type=str, default=None,
-                               help="write to specified file")
+        subparser = parser.add_parser("init",
+                                      help="initialize a wildcatting agent")
+        subparser.add_argument("agent", help="agent name (dir to write to)")
 
         subparser.set_defaults(run=cls.run)
 
     @staticmethod
     def run(args):
-        theme = DefaultTheme()
+        Agent.init(args.agent)
 
-        ins = []
-        for i in args.inputs:
-            ins.append(FieldCommand.val_map[i](theme,
-                                               args.width * args.height,
-                                               args.normalize))
-        outs = []
-        for o in args.outputs:
-            outs.append(FieldCommand.val_map[o](theme,
-                                                args.width * args.height,
-                                                args.normalize))
 
-        fw = FieldWriter(args, theme, ins, outs)
-        if args.file:
-            with open(args.file, 'w') as f:
-                fw.write(f)
-        else:
-            fw.write(sys.stdout)
+class BootstrapCommand:
+
+    @classmethod
+    def add_subparser(cls, parser):
+        subparser = parser.add_parser("bootstrap",
+                                      help=("bootstrap a component using "
+                                            "supervised training data"))
+        subparser.add_argument("agent", help="agent name (directory)")
+        subparser.add_argument("component", choices=components.keys(),
+                               help="component to bootstrap")
+
+        subparser.set_defaults(run=cls.run)
+
+    @staticmethod
+    def run(args):
+        comp = components[args.component].load(args.agent)
+        comp.bootstrap()
+
+
+class LearnCommand:
+
+    @classmethod
+    def add_subparser(cls, parser):
+        subparser = parser.add_parser("learn",
+                                      help="learn how to play wildcatting")
+        subparser.add_argument("agent", help="agent name (directory)")
+
+        subparser.set_defaults(run=cls.run)
+
+    @staticmethod
+    def run(args):
+        agent = Agent.load(args.agent)
+        agent.learn()
+
+
+class PlayCommand:
+
+    @classmethod
+    def add_subparser(cls, parser):
+        subparser = parser.add_parser("play",
+                                      help="learn how to play wildcatting")
+        subparser.add_argument("agent", help="agent name (directory)")
+        subparser.add_argument("host", help="wildcatting server hostname")
+        subparser.add_argument("game_id", help="game id")
+
+        subparser.set_defaults(run=cls.run)
+
+    @staticmethod
+    def run(args):
+        agent = Agent.load(args.agent)
+        agent.play(args.host, args.game_id)

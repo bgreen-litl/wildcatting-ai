@@ -11,7 +11,7 @@ setup(
     url="http://worldofwildcatting.com/",
     author="Original Wildcatter",
     author_email="unknown@example.org",
-    packages=["wcai"],
+    packages=["wcai", "wcdata"],
     test_suite="tests",
 
     install_requires = [
@@ -19,12 +19,14 @@ setup(
         "nose==1.1.2",
         "PEP8==0.6.1",
         "argparse==1.2.1",
-        "wildcatting==1.5"
+        "wildcatting==1.5",
+        "neurolab==0.2.0"
         ],
 
     entry_points = {
         "console_scripts" : [
-            "wcdata = wcai.control:main"
+            "wcdata = wcdata.control:main",
+            "wcai = wcai.control:main"
             ]
         }
     )

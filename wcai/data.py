@@ -120,7 +120,7 @@ class FieldWriter:
         tax_filler = TaxFiller(self.theme)
 
         if not self.args.no_headers:
-            self.write_headers(self.args.width * self.args.height / 
+            self.write_headers(self.args.width * self.args.height /
                                self.args.reduce ** 2, out)
 
         for i in xrange(self.args.num):
