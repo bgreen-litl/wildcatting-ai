@@ -1,1 +1,46 @@
 wildcatting-ai is an oil drilling agent
+
+
+Agent initialization:
+
+wcai init <agent> [--force] [--components {surveying report drilling sales}]
+
+Creates the following filesystem structure:
+
+agent/
+    surveying/
+	training/
+	surveying.net
+    report/
+	training/
+	report.net
+    drilling/
+	training/
+	drilling.net
+    sales/
+	training/
+	sales.net
+
+Data for supervised learning may be copied into the training directories for
+each component for use by the bootstrap command. The .net files contain weights
+for the neural networks that back each component.
+
+
+Bootstrapping:
+
+wcai bootstrap <agent> <component>
+
+Individual components are trained using supervised learning on explicit
+training data. This may help point things in the right general direction when
+unsupervised reinforcement learning begins. However, this is an optional step
+and can be used on as many or few of the components as desired.
+
+
+Reinforcement learning:
+
+wcai learn [--games <num>] [--components {surveying report drilling sales}]
+
+Here the agent plays itself repeatedly. Some subset of the components may be
+specified for update, while non updating components will remain frozen.
+Specifying less than the full set of components may be advantageous when some
+components have been reasonably bootstrapped while others have not.
