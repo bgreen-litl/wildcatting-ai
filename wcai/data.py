@@ -46,9 +46,7 @@ class Region:
         for row in xrange(y, y + h):
             for col in xrange(x, x + w):
                 site = field.getSite(row, col)
-                vals = {'prob': site.getProbability(),
-                        'cost': site.getDrillCost(),
-                        'tax': site.getTax()}
+                vals = {}
                 for vf in val_funcs:
                     vals[vf.header.lower()] = vf.value(site)
                 region.sites.append(vals)

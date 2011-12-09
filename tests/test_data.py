@@ -7,6 +7,10 @@ from wildcatting.theme import DefaultTheme
 from wcai.data import Region, OilProbability, UtilityEstimator
 
 
+theme = DefaultTheme()
+val_funcs = [OilProbability(theme, 80 * 24, normalize=False)]
+
+
 class FlatFiller(Filler):
     def fill(self, field):
         for row in xrange(field.getHeight()):
@@ -34,7 +38,7 @@ class RegionTest(unittest.TestCase):
         for scale, width, height in [(8, 80,24), (4, 40, 12), (2, 20, 6)]:
             field = OilField(width, height)
             FlatFiller().fill(field)
-            map = Region.map(field)
+            map = Region.map(field, val_funcs)
             region = Region.reduce(map, scale)
             self.assertEquals(len(region.sites), 30)
             for i in xrange(30):
@@ -48,7 +52,7 @@ class RegionTest(unittest.TestCase):
             DrillCostFiller(theme).fill(field)
             PotentialOilDepthFiller(theme).fill(field)
             ReservoirFiller(theme).fill(field)
-            map = Region.map(field)
+            map = Region.map(field, val_funcs)
             print map
             region = Region.reduce(map, scale)
             self.assertEquals(len(region.sites), 30)

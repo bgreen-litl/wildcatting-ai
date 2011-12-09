@@ -2,6 +2,11 @@ import unittest
 
 from os.path import exists, join
 
+from wildcatting.model import OilField
+from wildcatting.game import (Filler, OilFiller, DrillCostFiller, 
+                              ReservoirFiller, PotentialOilDepthFiller)
+from wildcatting.theme import DefaultTheme
+
 from wcai.agent import Agent, Surveying, Report, Drilling, Sales
 
 
@@ -22,6 +27,7 @@ class AgentTest(unittest.TestCase):
     def test_load(self):
         agent = Agent.load(dir)
 
+
 class SurveyingTest(unittest.TestCase):
 
     def test_init(self):
@@ -33,6 +39,19 @@ class SurveyingTest(unittest.TestCase):
     def save(self):
         surveying = Surveying.init(dir)
         surveying.save()
+
+    def test_choose(self):
+        theme = DefaultTheme()
+        field = OilField(80, 24)
+        OilFiller(theme).fill(field)
+        DrillCostFiller(theme).fill(field)
+        PotentialOilDepthFiller(theme).fill(field)
+        ReservoirFiller(theme).fill(field)
+
+        surveying = Surveying.load(dir)
+
+        coords = surveying.choose(field)
+        ## TODO some tests on the results
         
 
 class ReportTest(unittest.TestCase):
@@ -42,6 +61,7 @@ class ReportTest(unittest.TestCase):
 
     def test_load(self):
         report = Report.load(dir)
+
 
 class DrillingTest(unittest.TestCase):
 
