@@ -61,14 +61,12 @@ trained on mapping from probabilty space to reservoir size space alone. During
 RL, more inputs such as drill cost may be added and outputs are now updated
 by actual utilities.
 
-
 Bootstrapping:
 
 wcai bootstrap <agent> <component>
 
 Populates the gameplay NN with the weights from the training NN.  The gameplay
 NN may have more inputs than the gameplay NN.
-
 
 Simulation:
 
@@ -77,6 +75,10 @@ wcai simulate <agent> <component> [--visualize] [--file=<file>]
 Apply generated inputs to the gameplay network. Outputs the inputs and output
 choice.
 
+Individual components are trained using supervised learning on explicit
+training data. This may help point things in the right general direction when
+unsupervised reinforcement learning begins. However, this is an optional step
+and can be used on as many or few of the components as desired.
 
 Reinforcement learning:
 
