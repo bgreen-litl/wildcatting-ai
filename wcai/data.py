@@ -13,9 +13,7 @@ def normalize(val, min_val, max_val):
 
 
 class Region:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self):
         self.sites = []
 
     def __str__(self):
@@ -27,10 +25,26 @@ class Region:
         return str_
 
     @staticmethod
-    def map(field, val_funcs=[]):
-        region = Region(field.getWidth(), field.getHeight())
-        for row in xrange(field.getHeight()):
-            for col in xrange(field.getWidth()):
+    def map(field, val_funcs=[], center=None, size=None):
+        if not center:
+            center = (field.getWidth() / 2, field.getHeight() / 2)
+        if not size:
+            size = (field.getWidth(), field.getHeight())
+
+        region = Region()
+        region.field = field
+        region.size = size   # size of the region in the field
+        region.scale = 1
+        region.center = center
+        region.width = size[0]
+        region.height = size[1]
+
+        x = center[0] - size[0] / 2
+        y = center[1] - size[1] / 2
+        w, h = size
+
+        for row in xrange(y, y + h):
+            for col in xrange(x, x + w):
                 site = field.getSite(row, col)
                 vals = {'prob': site.getProbability(),
                         'cost': site.getDrillCost(),
@@ -41,10 +55,36 @@ class Region:
         return region
 
     @staticmethod
-    def avgs(x, y, w, h, region, val_funcs):
+    def reduce(region, scale):
+        reduct = Region()
+        reduct.field = region.field
+        reduct.size = (region.width / scale, region.height / scale)
+        reduct.scale = scale
+        reduct.center = region.center
+        reduct.width = region.size[0] / scale
+        reduct.height = region.size[1] / scale
+
+        # define the dimensions of the rectangle in the field
+        fw = 2.0 * region.width / (reduct.width + 1.0)
+        fh = 2.0 * region.height / (reduct.height + 1.0)
+        # offsets between overlapped subregions
+        ox, oy = fw / 2.0, fh / 2.0
+        # iterate across the overlapping regions
+        fy = -oy
+        for y in xrange(reduct.height):
+            fy += oy
+            fx = -ox
+            for x in xrange(reduct.width):
+                fx += ox
+                avgs = Region.avgs(fx, fy, fw, fh, region)
+                reduct.sites.append(avgs)
+        return reduct
+
+    @staticmethod
+    def avgs(x, y, w, h, region):
         avgs = {}
-        for vf in val_funcs:
-            avgs[vf.header] = 0
+        for val in region.sites[0].keys():
+            avgs[val] = 0
 
         x_range = int(math.ceil(x + w) - math.floor(x))
         y_range = int(math.ceil(y + h) - math.floor(y))
@@ -52,34 +92,24 @@ class Region:
             for col in xrange(x_range):
                 site = region.site(int(math.floor(y)) + row,
                                    int(math.floor(x)) + col)
-                for vf in val_funcs:
-                    avgs[vf.header] += site[vf.header]
+                for val in site.keys():
+                    avgs[val] += site[val]
 
         area = x_range * y_range
-        for tot in avgs.keys():
-            avgs[tot] /= area
+        for val in avgs.keys():
+            avgs[val] /= area
         return avgs
 
-    @staticmethod
-    def reduce(region, kw, kh, val_funcs):
-        # create a reduced region of size k (kw, kh)
-        reduction = Region(kw, kh)
-        # define the dimensions of the rectangle in the field
-        fw = 2.0 * region.width / (kw + 1.0)
-        fh = 2.0 * region.height / (kh + 1.0)
-        # offsets between overlapped subregions
-        ox, oy = fw / 2.0, fh / 2.0
-        # iterate across the overlapping regions
-        fy = -oy
-        for y in xrange(kh):
-            fy += oy
-            fx = -ox
-            for x in xrange(kw):
-                fx += ox
-                avgs = Region.avgs(fx, fy, fw, fh, region, val_funcs)
-                reduction.sites.append(avgs)
+    def inputs(self, vals):
+        inputs = []
+        for s in self.sites:
+            for val in vals:
+                inputs.append(s[val])
+        return inputs
 
-        return reduction
+    def best(self, val):
+        vals = [s[val] for s in self.sites]
+        site = max([(b, a) for a, b in enumerate(vals)])[1]
 
     def site(self, row, col):
         site = self.sites[row * self.width + col]
@@ -134,10 +164,7 @@ class FieldWriter:
             val_funcs = self.ins + self.outs
             region = Region.map(field, val_funcs)
             if self.args.reduce != 1:
-                region = Region.reduce(region,
-                                       region.width / self.args.reduce,
-                                       region.height / self.args.reduce,
-                                       val_funcs)
+                region = Region.reduce(region, self.args.reduce)
 
             self.write_values(region, self.ins, out)
             self.write_values(region, self.outs, out)

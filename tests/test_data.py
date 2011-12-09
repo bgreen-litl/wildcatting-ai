@@ -1,7 +1,8 @@
 import unittest
 
 from wildcatting.model import OilField, Site
-from wildcatting.game import Filler, OilFiller, DrillCostFiller, ReservoirFiller, PotentialOilDepthFiller
+from wildcatting.game import (Filler, OilFiller, DrillCostFiller, 
+                              ReservoirFiller, PotentialOilDepthFiller)
 from wildcatting.theme import DefaultTheme
 from wcai.data import Region, OilProbability, UtilityEstimator
 
@@ -30,19 +31,18 @@ class RegionTest(unittest.TestCase):
 
     def test_fill_flat(self):
         theme = DefaultTheme()
-        for width, height in [(80,24), (40, 12), (20, 6)]:
+        for scale, width, height in [(8, 80,24), (4, 40, 12), (2, 20, 6)]:
             field = OilField(width, height)
             FlatFiller().fill(field)
             map = Region.map(field)
-            val_funcs = [OilProbability(theme, width*height)]
-            region = Region.reduce(map, 10, 3, val_funcs)
+            region = Region.reduce(map, scale)
             self.assertEquals(len(region.sites), 30)
             for i in xrange(30):
                 self.assertEquals(region.sites[i]['prob'], 10.0)
 
     def test_visualize(self):
         theme = DefaultTheme()
-        for width, height in [(40, 12), (20, 6)]:
+        for scale, width, height in [(4, 40, 12), (2, 20, 6)]:
             field = OilField(width, height)
             OilFiller(theme).fill(field)
             DrillCostFiller(theme).fill(field)
@@ -50,8 +50,7 @@ class RegionTest(unittest.TestCase):
             ReservoirFiller(theme).fill(field)
             map = Region.map(field)
             print map
-            val_funcs = [OilProbability(theme, width * height)]
-            region = Region.reduce(map, 10, 3, val_funcs)
+            region = Region.reduce(map, scale)
             self.assertEquals(len(region.sites), 30)
             print region
 
