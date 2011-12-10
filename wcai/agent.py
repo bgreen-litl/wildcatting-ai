@@ -1,7 +1,8 @@
+import os
 import random
-import neurolab
+import numpy as np
+import neurolab as nl
 
-from os import makedirs
 from os.path import join, exists
 
 from wildcatting.theme import DefaultTheme
@@ -56,12 +57,11 @@ class Component:
 
         training_dir = join(comp.dir, 'training')
         if not exists(training_dir):
-            makedirs(training_dir)
+            os.makedirs(training_dir)
 
         hiddens = int(2 * (cls.inputs + cls.outputs) / 3.0)
-
-        comp.nn = neurolab.net.newff([[0.0, 1.0]] * cls.inputs,
-                                     [hiddens, cls.outputs])
+        comp.nn = nl.net.newff([[0.0, 1.0]] * cls.inputs,
+                               [cls.inputs, hiddens, cls.outputs])
         comp.save()
         return comp
 
@@ -69,7 +69,7 @@ class Component:
     def load(cls, agent):
         dir = join(agent, cls.name)
         comp = cls(dir)
-        comp.nn = neurolab.load(join(dir, 'utility.net'))
+        comp.nn = nl.load(join(dir, 'utility.net'))
         return comp
 
     def __init__(self, dir):
@@ -79,8 +79,17 @@ class Component:
         self.nn.save(join(self.dir, 'utility.net'))
 
     def train(self):
-        ## TODO train the nn on all datafiles found in training/
-        pass
+        inp = []
+        out = []
+        # TODO support numpy binary datafiles
+        dir = join(self.dir, 'training')
+        for tf in os.listdir(dir):
+            data = np.loadtxt(join(dir, tf))
+            for d in data:
+                inp.append(d[:self.inputs])
+                out.append(d[self.inputs:])
+
+        self.nn.train(inp, out, epochs=500, show=10, goal=0.25)
 
 
 class Surveying(Component):
