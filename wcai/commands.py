@@ -63,7 +63,7 @@ class PlayCommand:
     @classmethod
     def add_subparser(cls, parser):
         subparser = parser.add_parser("play",
-                                      help="learn how to play wildcatting")
+                                      help="play wildcatting")
         subparser.add_argument("agent", help="agent name (directory)")
         subparser.add_argument("host", help="wildcatting server hostname")
         subparser.add_argument("game_id", help="game id")
