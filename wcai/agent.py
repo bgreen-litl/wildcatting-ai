@@ -77,7 +77,7 @@ class Component:
     def save(self):
         self.nn.save(join(self.dir, 'utility.net'))
 
-    def bootstrap(self):
+    def train(self):
         ## TODO train the nn on all datafiles found in training/
         pass
 

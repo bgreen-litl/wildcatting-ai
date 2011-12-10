@@ -11,7 +11,7 @@ parser.add_argument("--debug", action="store_true", help=argparse.SUPPRESS)
 
 subparsers = parser.add_subparsers(title="Commands")
 commands.InitCommand.add_subparser(subparsers)
-commands.BootstrapCommand.add_subparser(subparsers)
+commands.TrainCommand.add_subparser(subparsers)
 commands.LearnCommand.add_subparser(subparsers)
 commands.PlayCommand.add_subparser(subparsers)
 
