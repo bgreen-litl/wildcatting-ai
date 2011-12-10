@@ -105,10 +105,6 @@ class Region:
                 inputs.append(s[val])
         return inputs
 
-    def best(self, val):
-        vals = [s[val] for s in self.sites]
-        site = max([(b, a) for a, b in enumerate(vals)])[1]
-
     def site(self, row, col):
         site = self.sites[row * self.width + col]
         return site
