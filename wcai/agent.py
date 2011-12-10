@@ -66,10 +66,11 @@ class Component:
         return comp
 
     @classmethod
-    def load(cls, dir):
-        surveying = Surveying(join(dir, cls.name))
-        surveying.nn = neurolab.load(join(surveying.dir, 'utility.net'))
-        return surveying
+    def load(cls, agent):
+        dir = join(agent, cls.name)
+        comp = cls(dir)
+        comp.nn = neurolab.load(join(dir, 'utility.net'))
+        return comp
 
     def __init__(self, dir):
         self.dir = dir
