@@ -2,10 +2,14 @@ import logging
 import sys
 
 from wildcatting.theme import DefaultTheme
+from wildcatting.game import (OilFiller, DrillCostFiller, TaxFiller,
+                             PotentialOilDepthFiller, ReservoirFiller)
+from wildcatting.model import OilField
 
-from wcai.data import (OilProbability, DrillCost, Taxes, OilPresence,
+
+from wcai.data import (Region, OilProbability, DrillCost, Taxes, OilPresence,
                        OilReserves, ReservoirSize, OilValue, UtilityEstimator,
-                       FieldWriter, normalize)
+                       normalize)
 
 
 log = logging.getLogger("wildcatting-ai")
@@ -100,3 +104,58 @@ class FieldCommand:
                 fw.write(f)
         else:
             fw.write(sys.stdout)
+
+
+class FieldWriter:
+    def __init__(self, args, theme, ins, outs):
+        self.args = args
+        self.theme = theme
+        self.ins = ins
+        self.outs = outs
+
+    def write_headers(self, site_ct, out):
+        # inputs
+        for site in xrange(site_ct):
+            for i in self.ins:
+                out.write("%s_%s%s" % (i.header.upper(), site,
+                                       self.args.delim))
+        # outputs
+        for site in xrange(site_ct):
+            for o in self.outs:
+                out.write("%s_%s%s" % (o.header.upper(), site,
+                                       self.args.delim))
+
+    def write_values(self, region, val_funcs, out):
+        for row in xrange(region.height):
+            for col in xrange(region.width):
+                site = region.site(row, col)
+                for vf in val_funcs:
+                    out.write("%s%s" % (site[vf.header], self.args.delim))
+
+    def write(self, out):
+        oil_filler = OilFiller(self.theme)
+        depth_filler = PotentialOilDepthFiller(self.theme)
+        res_filler = ReservoirFiller(self.theme)
+        cost_filler = DrillCostFiller(self.theme)
+        tax_filler = TaxFiller(self.theme)
+
+        if not self.args.no_headers:
+            self.write_headers(self.args.width * self.args.height /
+                               self.args.reduce ** 2, out)
+
+        for i in xrange(self.args.num):
+            field = OilField(self.args.width, self.args.height)
+            oil_filler.fill(field)
+            depth_filler.fill(field)
+            res_filler.fill(field)
+            cost_filler.fill(field)
+            tax_filler.fill(field)
+
+            val_funcs = self.ins + self.outs
+            region = Region.map(field, val_funcs)
+            if self.args.reduce != 1:
+                region = Region.reduce(region, self.args.reduce)
+
+            self.write_values(region, self.ins, out)
+            self.write_values(region, self.outs, out)
+            out.write('\n')
