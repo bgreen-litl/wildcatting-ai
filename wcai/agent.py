@@ -100,37 +100,40 @@ class Surveying(Component):
                  DrillCost(theme, 80 * 24, normalize=True),
                  OilPresence(theme, 80 * 24, normalize=True)]
 
-    @staticmethod
-    def select_output(outputs):
+    # Select the site to survey from a region of the correct size to apply
+    # directly to the NN. Makes a choice with probabilities proportional to
+    # the expected utility as estimated by the NN.
+    def _choose_nn(self, region):
+        inputs = region.inputs(['prob', 'cost'])
+        outputs = self.nn.sim([inputs])[0]
         tot_out = reduce(lambda x, y: x + y, outputs)
         r = random.uniform(0, 1)
         t = 0
         for i, o in enumerate(outputs):
             t += o / tot_out
             if r <= t:
-                return i
+                break
+        return i
 
-    def select(self, region):
-        inputs = region.inputs(['prob', 'cost'])
-        outputs = self.nn.sim([inputs])[0]
-        return Surveying.select_output(outputs)
-
-    # region is some 1:1 subset of the field
+    # Choose a site to survey from the specified region of the field. The
+    # region here is always at 1:1 but varies in size. The scale is the factor
+    # by which the region must be reduced in order to apply the NN.
     def _choose(self, region, scale):
         if scale == 1:
-            i = self.select(region)
+            i = self._choose_nn(region)
             c = (i % region.width, i / region.height)
             x = region.center[0] - region.size[0] / 2 + c[0]
             y = region.center[1] - region.size[1] / 2 + c[1]
             return x, y
 
         r = Region.reduce(region, scale)
-        i = self.select(r)
+        i = self._choose_nn(r)
         map = Region.map(region.field, Surveying.val_funcs, r.center,
                          (region.width / 2, region.height / 2))
         return self._choose(map, scale / 2)
 
     def choose(self, field):
+        """Choose a site to survey in the specified field"""
         map = Region.map(field, Surveying.val_funcs)
         coords = self._choose(map, 8)
         return coords
