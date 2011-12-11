@@ -2,14 +2,10 @@ import logging
 import sys
 
 from wildcatting.theme import DefaultTheme
-from wildcatting.game import (OilFiller, DrillCostFiller, TaxFiller,
-                             PotentialOilDepthFiller, ReservoirFiller)
-from wildcatting.model import OilField
 
-
-from wcai.data import (Region, OilProbability, DrillCost, Taxes, OilPresence,
-                       OilReserves, ReservoirSize, OilValue, UtilityEstimator,
-                       normalize)
+from wcai.data import (Simulator, Region, OilProbability, DrillCost, Taxes,
+                       OilPresence, OilReserves, ReservoirSize, OilValue,
+                       UtilityEstimator, normalize)
 
 
 log = logging.getLogger("wildcatting-ai")
@@ -133,23 +129,13 @@ class FieldWriter:
                     out.write("%s%s" % (site[vf.header], self.args.delim))
 
     def write(self, out):
-        oil_filler = OilFiller(self.theme)
-        depth_filler = PotentialOilDepthFiller(self.theme)
-        res_filler = ReservoirFiller(self.theme)
-        cost_filler = DrillCostFiller(self.theme)
-        tax_filler = TaxFiller(self.theme)
-
         if not self.args.no_headers:
             self.write_headers(self.args.width * self.args.height /
                                self.args.reduce ** 2, out)
 
+        sim = Simulator(DefaultTheme())
         for i in xrange(self.args.num):
-            field = OilField(self.args.width, self.args.height)
-            oil_filler.fill(field)
-            depth_filler.fill(field)
-            res_filler.fill(field)
-            cost_filler.fill(field)
-            tax_filler.fill(field)
+            field = sim.field(self.args.width, self.args.height)
 
             val_funcs = self.ins + self.outs
             region = Region.map(field, val_funcs)

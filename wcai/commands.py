@@ -1,5 +1,8 @@
 import logging
 
+from wildcatting.theme import DefaultTheme
+
+from .data import Simulator, Region, OilProbability
 from .agent import Agent, Surveying, Report, Drilling, Sales
 
 
@@ -33,13 +36,48 @@ class TrainCommand:
         subparser.add_argument("agent", help="agent name (directory)")
         subparser.add_argument("component", choices=components.keys(),
                                help="component to train")
+        subparser.add_argument("--epochs", default=100, type=int,
+                               help="training epochs")
+        subparser.add_argument("--show", default=10, type=int,
+                               help="show error every n epochs")
+        subparser.add_argument("--goal", default=0.1, type=float,
+                               help="goal error rate")
 
         subparser.set_defaults(run=cls.run)
 
     @staticmethod
     def run(args):
         comp = components[args.component].load(args.agent)
-        comp.train()
+        comp.train(args.epochs, args.show, args.goal)
+
+
+class SimulateCommand:
+
+    @classmethod
+    def add_subparser(cls, parser):
+        subparser = parser.add_parser("simulate",
+                help=("simulate a component using generated game data"))
+        subparser.add_argument("agent", help="agent name (directory)")
+        subparser.add_argument("component", choices=components.keys(),
+                               help="component to simulate")
+        subparser.add_argument("--width", default=80, type=int,
+                               help="oil field width")
+        subparser.add_argument("--height", default=24, type=int,
+                               help="oil field height")
+
+        subparser.set_defaults(run=cls.run)
+
+    @staticmethod
+    def run(args):
+        comp = components[args.component].load(args.agent)
+        theme = DefaultTheme()
+        sim = Simulator(theme)
+        field = sim.field(args.width, args.height)
+        site_ct = args.width * args.height
+        region = Region.map(field, val_funcs=[OilProbability(theme, site_ct)])
+        col, row = comp.choose(field)
+        site = field.getSite(row, col)
+        print (col, row), '->', site.getProbability() 
 
 
 class LearnCommand:

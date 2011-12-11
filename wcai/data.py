@@ -1,12 +1,30 @@
 import math
 import random
 
+from wildcatting.model import OilField
+from wildcatting.game import (OilFiller, PotentialOilDepthFiller,
+                              ReservoirFiller, DrillCostFiller, TaxFiller)
+
 
 rnd = random.Random()
 
 
 def normalize(val, min_val, max_val):
     return (val - min_val) / float(max_val - min_val)
+
+
+class Simulator:
+    def __init__(self, theme):
+        self.theme = theme
+        self.fillers = [OilFiller(self.theme),
+                        PotentialOilDepthFiller(self.theme),
+                        ReservoirFiller(self.theme),
+                        DrillCostFiller(self.theme), TaxFiller(self.theme)]
+
+    def field(self, width, height):
+        field = OilField(width, height)
+        map(lambda x: x.fill(field), self.fillers)
+        return field
 
 
 class Region:
