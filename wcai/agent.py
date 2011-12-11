@@ -61,7 +61,8 @@ class Component:
 
         hiddens = int(2 * (cls.inputs + cls.outputs) / 3.0)
         comp.nn = nl.net.newff([[0.0, 1.0]] * cls.inputs,
-                               [cls.inputs, hiddens, cls.outputs])
+                               [hiddens, cls.outputs])
+        nl.init.init_rand(comp.nn.layers[0])
         comp.save()
         return comp
 
