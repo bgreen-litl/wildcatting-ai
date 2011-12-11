@@ -177,7 +177,6 @@ class OilPresence(ValueFunction):
         return 0.0 if site.getReservoir() is None else 1.0
 
 
-# TODO normalization
 class ReservoirSize(ValueFunction):
     header = "size"
 
@@ -186,6 +185,8 @@ class ReservoirSize(ValueFunction):
         if site.getReservoir():
             reservoir = site.getReservoir()
             size = reservoir._size
+            if self.normalize:
+                size = normalize(size, 0, self.site_ct)
         return size
 
 
