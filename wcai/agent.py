@@ -7,7 +7,7 @@ from os.path import join, exists
 
 from wildcatting.theme import DefaultTheme
 
-from .data import OilProbability, DrillCost, OilPresence, Region
+from .data import OilProbability, Region
 
 
 theme = DefaultTheme()
@@ -88,23 +88,21 @@ class Component:
             for d in data:
                 inp.append(d[:self.inputs])
                 out.append(d[self.inputs:])
-
-        self.nn.train(inp, out, epochs=500, show=10, goal=0.25)
+        self.nn.train(inp, out, epochs=500, show=1, goal=0.5)
 
 
 class Surveying(Component):
     name = 'surveying'
-    inputs = 60   # prob0, cost0 [..] probn, costn
-    outputs = 30  # expected utilities of surveying each site
-    val_funcs = [OilProbability(theme, 80 * 24, normalize=True),
-                 DrillCost(theme, 80 * 24, normalize=True),
-                 OilPresence(theme, 80 * 24, normalize=True)]
+    # TODO incorporate drill cost input and expected utility output
+    inputs = 30  # prob
+    outputs = 30  # reservoir size for now
+    val_funcs = [OilProbability(theme, 80 * 24, normalize=True)]
 
     # Select the site to survey from a region of the correct size to apply
     # directly to the NN. Makes a choice with probabilities proportional to
     # the expected utility as estimated by the NN.
     def _choose_nn(self, region):
-        inputs = region.inputs(['prob', 'cost'])
+        inputs = region.inputs(['prob'])
         outputs = self.nn.sim([inputs])[0]
         tot_out = reduce(lambda x, y: x + y, outputs)
         r = random.uniform(0, 1)
