@@ -61,7 +61,7 @@ class Component:
 
         hiddens = int(2 * (cls.inputs + cls.outputs) / 3.0)
         comp.nn = nl.net.newff([[0.0, 1.0]] * cls.inputs,
-                               [10, cls.outputs])
+                               [hiddens, cls.outputs])
         nl.init.init_rand(comp.nn.layers[0])
         nl.init.init_rand(comp.nn.layers[1])
         comp.save()
@@ -90,7 +90,8 @@ class Component:
             for d in data:
                 inp.append(d[:self.inputs])
                 out.append(d[self.inputs:])
-        nl.train.train_rprop(self.nn, inp, out, epochs=epochs, show=show, goal=goal)
+        nl.train.train_rprop(self.nn, inp, out, epochs=epochs, show=show,
+                             goal=goal)
         self.nn.save(join(self.dir, 'utility.net'))
 
 
