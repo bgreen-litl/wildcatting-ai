@@ -88,7 +88,8 @@ class Component:
             for d in data:
                 inp.append(d[:self.inputs])
                 out.append(d[self.inputs:])
-        self.nn.train(inp, out, epochs=500, show=1, goal=0.5)
+        self.nn.train(inp, out, epochs=50, show=1, goal=0.5)
+        self.nn.save(join(self.dir, 'utility.net'))
 
 
 class Surveying(Component):
