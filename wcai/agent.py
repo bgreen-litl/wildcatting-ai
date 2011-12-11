@@ -61,8 +61,9 @@ class Component:
 
         hiddens = int(2 * (cls.inputs + cls.outputs) / 3.0)
         comp.nn = nl.net.newff([[0.0, 1.0]] * cls.inputs,
-                               [hiddens, cls.outputs])
+                               [10, cls.outputs])
         nl.init.init_rand(comp.nn.layers[0])
+        nl.init.init_rand(comp.nn.layers[1])
         comp.save()
         return comp
 
@@ -79,7 +80,7 @@ class Component:
     def save(self):
         self.nn.save(join(self.dir, 'utility.net'))
 
-    def train(self):
+    def train(self, epochs, show, goal):
         inp = []
         out = []
         # TODO support numpy binary datafiles
@@ -89,7 +90,7 @@ class Component:
             for d in data:
                 inp.append(d[:self.inputs])
                 out.append(d[self.inputs:])
-        self.nn.train(inp, out, epochs=50, show=1, goal=0.5)
+        nl.train.train_rprop(self.nn, inp, out, epochs=epochs, show=show, goal=goal)
         self.nn.save(join(self.dir, 'utility.net'))
 
 
