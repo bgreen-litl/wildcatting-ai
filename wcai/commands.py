@@ -64,6 +64,8 @@ class SimulateCommand:
                                help="oil field width")
         subparser.add_argument("--height", default=24, type=int,
                                help="oil field height")
+        subparser.add_argument("--visualize", action='store_true',
+                               default=False, help="output visualization aid")
 
         subparser.set_defaults(run=cls.run)
 
@@ -75,9 +77,11 @@ class SimulateCommand:
         field = sim.field(args.width, args.height)
         site_ct = args.width * args.height
         region = Region.map(field, val_funcs=[OilProbability(theme, site_ct)])
+        if args.visualize:
+            print region
         col, row = comp.choose(field)
         site = field.getSite(row, col)
-        print (col, row), '->', site.getProbability() 
+        print (col, row), '->', site.getProbability()
 
 
 class LearnCommand:
