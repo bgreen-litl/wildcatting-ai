@@ -21,6 +21,8 @@ class Agent:
         agent.report = Report.init(dir)
         agent.drilling = Drilling.init(dir)
         agent.sales = Sales.init(dir)
+        agent.probabilty = Probability.init(dir)
+        agent.drill_cost = DrillCost.init(dir)
         return agent
 
     @staticmethod
@@ -30,6 +32,8 @@ class Agent:
         agent.report = Surveying.load(dir)
         agent.drilling = Drilling.load(dir)
         agent.sales = Sales.load(dir)
+        agent.probability = Probability.load(dir)
+        agent.drill_cost = DrillCost.load(dir)
         return agent
 
     def __init__(self, dir):
@@ -40,6 +44,8 @@ class Agent:
         self.report.save(self.dir)
         self.drilling.save(self.dir)
         self.sales.save(self.dir)
+        self.probability.save(self.dir)
+        self.drill_cost.save(self.dir)
 
     def learn(self):
         ## TODO play one billion games
@@ -108,13 +114,33 @@ class Surveying(Component):
     def _choose_nn(self, region):
         inputs = region.inputs(['prob'])
         outputs = self.nn.sim([inputs])[0]
+
+        print region
+        s = np.array([float('%0.3f' % o) for o in outputs])
+        s.shape = (3, 10)
+        print s
+
+        # select the best for now
+        bi = bo = -1
+        for i, o in enumerate(outputs):
+            if o > bo:
+                bo = o
+                bi = i
+        return bi
+
         tot_out = reduce(lambda x, y: x + y, outputs)
+
         r = random.uniform(0, 1)
         t = 0
         for i, o in enumerate(outputs):
             t += o / tot_out
             if r <= t:
                 break
+
+        s = np.array([float('%0.3f' % o) for o in outputs])
+        s.shape = (3, 10)
+        print s
+
         return i
 
     # Choose a site to survey from the specified region of the field. The
@@ -157,3 +183,17 @@ class Sales(Component):
     name = 'sales'
     inputs = 3   # income, tax, age
     outputs = 2  # expected utility of selling and of not selling
+
+
+class Probability(Component):
+    """Theorize a probability distribution"""
+    name = 'probability'
+    inputs = 80 * 24
+    outputs = 80 * 24
+
+
+class DrillCost(Component):
+    """Theorize a drill cost distribution"""
+    name = 'drill_cost'
+    inputs = 30
+    outputs = 30
