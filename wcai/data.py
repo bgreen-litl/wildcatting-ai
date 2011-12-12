@@ -34,7 +34,7 @@ class Region:
     def __str__(self):
         str_ = ""
         for i, s in enumerate(self.sites):
-            str_ += ("%0.0f " % (s['prob']))
+            str_ += ("%0.2f " % (s['prob']))
             if (i + 1) % self.width == 0:
                 str_ += "\n"
         return str_
@@ -66,6 +66,30 @@ class Region:
                     vals[vf.header.lower()] = vf.value(site)
                 region.sites.append(vals)
         return region
+
+    @staticmethod
+    def partition(field, scale, val_funcs):
+        w = field.getWidth() / scale  # 10
+        h = field.getHeight() / scale  # 3
+        parts = []
+        for i in xrange(w * h):
+            part = Region()
+            part.field = field
+            part.size = (w, h)  # (10, 3)
+            part.scale = 1
+            (x, y) = (i % w, i / w)
+            part.center = (x + (w / 2), y + (h / 2))
+            part.width = w
+            part.height = h
+            for row in xrange(y, y + h):
+                for col in xrange(x, x + w):
+                    site = field.getSite(row, col)
+                    vals = {}
+                    for vf in val_funcs:
+                        vals[vf.header] = vf.value(site, scale)
+                    part.sites.append(vals)
+            parts.append(part)
+        return parts
 
     @staticmethod
     def reduce(region, scale):
@@ -135,7 +159,7 @@ class ValueFunction:
 class OilProbability(ValueFunction):
     header = "prob"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         prob = site.getProbability()
         if self.normalize:
             prob = normalize(prob, 0.0, 100.0)
@@ -145,7 +169,7 @@ class OilProbability(ValueFunction):
 class DrillCost(ValueFunction):
     header = "cost"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         cost = site.getDrillCost()
         if self.normalize:
             cost = normalize(cost, self.theme.getMinDrillCost(),
@@ -156,7 +180,7 @@ class DrillCost(ValueFunction):
 class Taxes(ValueFunction):
     header = "tax"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         tax = site.getTax()
         if self.normalize:
             tax = normalize(tax, self.theme.getMinTax(),
@@ -167,7 +191,7 @@ class Taxes(ValueFunction):
 class OilValue(ValueFunction):
     header = "val"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         price = self.theme.getOilPrices()._price
         reserves = 0
         if site.getReservoir():
@@ -180,7 +204,7 @@ class OilValue(ValueFunction):
 class OilReserves(ValueFunction):
     header = "bbl"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         reserves = 0
         if site.getReservoir():
             reservoir = site.getReservoir()
@@ -191,20 +215,20 @@ class OilReserves(ValueFunction):
 class OilPresence(ValueFunction):
     header = "wet"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         return 0.0 if site.getReservoir() is None else 1.0
 
 
 class ReservoirSize(ValueFunction):
     header = "size"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         size = 0
         if site.getReservoir():
             reservoir = site.getReservoir()
             size = reservoir._size
             if self.normalize:
-                size = normalize(size, 0, self.site_ct)
+                size = normalize(size, 0, self.site_ct / (scale ** 2))
         return size
 
 
@@ -221,7 +245,7 @@ class ReservoirSize(ValueFunction):
 class UtilityEstimator(ValueFunction):
     header = "util"
 
-    def value(self, site):
+    def value(self, site, scale=1):
         price = self.theme.getOilPrices()._price
         cost = site.getDrillCost()
         pot = site.getPotentialOilDepth()
@@ -237,7 +261,7 @@ class UtilityEstimator(ValueFunction):
         #     peak oil (very rough formulation)
         #     reserves would average out to the per site mean
         mean_reserves = self.theme.getMeanSiteReserves()
-        max_oil = self.site_ct / 8 / 2.0 * mean_reserves * price
+        max_oil = self.site_ct / 8 / 2.0 * mean_reserves * price / (scale ** 2)
 
         expected = 0
         if site.getReservoir():
