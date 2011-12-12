@@ -3,12 +3,14 @@ import logging
 from wildcatting.theme import DefaultTheme
 
 from .data import Simulator, Region, OilProbability
-from .agent import Agent, Surveying, Report, Drilling, Sales
+from .agent import (Agent, Surveying, Report, Drilling, Sales, Probability,
+                    DrillCost)
 
 
 log = logging.getLogger("wcai")
 
-components = dict([(c.name, c) for c in [Surveying, Report, Drilling, Sales]])
+components = dict([(c.name, c) for c in [Surveying, Report, Drilling, Sales,
+                                         Probability, DrillCost]])
 
 
 class InitCommand:
@@ -18,12 +20,19 @@ class InitCommand:
         subparser = parser.add_parser("init",
                                       help="initialize a wildcatting agent")
         subparser.add_argument("agent", help="agent name (dir to write to)")
+        subparser.add_argument("--components", choices=components.keys(),
+                               nargs='+',
+                               help="only initialize specified components")
 
         subparser.set_defaults(run=cls.run)
 
     @staticmethod
     def run(args):
-        Agent.init(args.agent)
+        if args.components:
+            for comp in args.components:
+                components[comp].init(args.agent)
+        else:
+            Agent.init(args.agent)
 
 
 class TrainCommand:
@@ -76,7 +85,8 @@ class SimulateCommand:
         sim = Simulator(theme)
         field = sim.field(args.width, args.height)
         site_ct = args.width * args.height
-        region = Region.map(field, val_funcs=[OilProbability(theme, site_ct)])
+        region = Region.map(field, val_funcs=[OilProbability(theme, site_ct,
+                                                             normalize=True)])
         if args.visualize:
             print region
         col, row = comp.choose(field)
