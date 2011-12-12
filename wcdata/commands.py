@@ -74,6 +74,8 @@ class FieldCommand:
                                default=False, help="normalize between 0 and 1")
         subparser.add_argument("--reduce", type=int, default=1,
                                help="scale down by the specified factor")
+        subparser.add_argument("--partition", type=int,
+                               help="output partitions of a larger field")
         subparser.add_argument("--file", type=str, default=None,
                                help="write to specified file")
 
@@ -130,18 +132,28 @@ class FieldWriter:
 
     def write(self, out):
         if not self.args.no_headers:
-            self.write_headers(self.args.width * self.args.height /
-                               self.args.reduce ** 2, out)
+            site_ct = (self.args.width * self.args.height /
+                       self.args.reduce ** 2)
+            if self.args.partition:
+                site_ct /= self.args.partition ** 2
+            self.write_headers(site_ct, out)
 
         sim = Simulator(DefaultTheme())
         for i in xrange(self.args.num):
             field = sim.field(self.args.width, self.args.height)
-
             val_funcs = self.ins + self.outs
             region = Region.map(field, val_funcs)
-            if self.args.reduce != 1:
-                region = Region.reduce(region, self.args.reduce)
 
-            self.write_values(region, self.ins, out)
-            self.write_values(region, self.outs, out)
-            out.write('\n')
+            if self.args.partition:
+                regions = region.partition(field, self.args.partition,
+                                           val_funcs)
+            else:
+                regions = [region]
+
+            if self.args.reduce != 1:
+                regions = [Region.reduce(r, self.args.reduce) for r in regions]
+
+            for region in regions:
+                self.write_values(region, self.ins, out)
+                self.write_values(region, self.outs, out)
+                out.write('\n')
