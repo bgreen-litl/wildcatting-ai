@@ -1,5 +1,6 @@
 import math
 import random
+import numpy as np
 
 from wildcatting.model import OilField
 from wildcatting.game import (OilFiller, PotentialOilDepthFiller,
@@ -28,38 +29,21 @@ class Simulator:
 
 
 class Region:
-    def __init__(self):
-        self.sites = []
-
-    def __str__(self):
-        str_ = ""
-        for i, s in enumerate(self.sites):
-            str_ += ("%0.2f " % (s['prob']))
-            if (i + 1) % self.width == 0:
-                str_ += "\n"
-        return str_
-
     @staticmethod
-    def map(field, val_funcs=[], center=None, size=None):
-        if not center:
-            center = (field.getWidth() / 2, field.getHeight() / 2)
+    def map(field, val_funcs=[], pos=(0, 0), size=None):
         if not size:
             size = (field.getWidth(), field.getHeight())
 
         region = Region()
         region.field = field
-        region.size = size   # size of the region in the field
+        region.size = size   # size of corresponding region in field
         region.scale = 1
-        region.center = center
-        region.width = size[0]
-        region.height = size[1]
+        region.pos = pos
+        region.wh = size  # width, height of the region
 
-        x = center[0] - size[0] / 2
-        y = center[1] - size[1] / 2
-        w, h = size
-
-        for row in xrange(y, y + h):
-            for col in xrange(x, x + w):
+        x, y = pos
+        for row in xrange(y, y + size[1]):
+            for col in xrange(x, x + size[0]):
                 site = field.getSite(row, col)
                 vals = {}
                 for vf in val_funcs:
@@ -78,9 +62,8 @@ class Region:
             part.size = (w, h)  # (10, 3)
             part.scale = 1
             (x, y) = (i % w, i / w)
-            part.center = (x + (w / 2), y + (h / 2))
-            part.width = w
-            part.height = h
+            part.pos = (x, y)
+            part.wh = (w, h)
             for row in xrange(y, y + h):
                 for col in xrange(x, x + w):
                     site = field.getSite(row, col)
@@ -95,34 +78,33 @@ class Region:
     def reduce(region, scale):
         reduct = Region()
         reduct.field = region.field
-        reduct.size = (region.width / scale, region.height / scale)
+        reduct.size = region.wh
         reduct.scale = scale
-        reduct.center = region.center
-        reduct.width = region.size[0] / scale
-        reduct.height = region.size[1] / scale
+        reduct.pos = region.pos
+        reduct.wh = np.array(region.size) / scale
 
         # define the dimensions of the rectangle in the field
-        fw = 2.0 * region.width / (reduct.width + 1.0)
-        fh = 2.0 * region.height / (reduct.height + 1.0)
+        fwh = 2.0 * np.array(region.wh) / (np.array(reduct.wh) + 1.0)
         # offsets between overlapped subregions
-        ox, oy = fw / 2.0, fh / 2.0
+        ox, oy = fwh / 2.0
         # iterate across the overlapping regions
         fy = -oy
-        for y in xrange(reduct.height):
+        for y in xrange(reduct.wh[1]):
             fy += oy
             fx = -ox
-            for x in xrange(reduct.width):
+            for x in xrange(reduct.wh[0]):
                 fx += ox
-                avgs = Region.avgs(fx, fy, fw, fh, region)
+                avgs = Region.avgs(fx, fy, fwh, region)
                 reduct.sites.append(avgs)
         return reduct
 
     @staticmethod
-    def avgs(x, y, w, h, region):
+    def avgs(x, y, size, region):
         avgs = {}
         for val in region.sites[0].keys():
             avgs[val] = 0
 
+        w, h = size
         x_range = int(math.ceil(x + w) - math.floor(x))
         y_range = int(math.ceil(y + h) - math.floor(y))
         for row in xrange(y_range):
@@ -137,6 +119,21 @@ class Region:
             avgs[val] /= area
         return avgs
 
+    def __init__(self):
+        self.sites = []
+
+    def __str__(self):
+        str_ = ""
+        for i, s in enumerate(self.sites):
+            str_ += ("%s " % (int(s['prob'] * 10)))
+            if (i + 1) % self.wh[0] == 0:
+                str_ += "\n"
+        str_ += "(Covering %s %s)" % self.size
+        return str_
+
+    def coords(self, idx):
+        return np.array([idx % self.wh[0], idx / self.wh[0]])
+
     def inputs(self, vals):
         inputs = []
         for s in self.sites:
@@ -145,7 +142,7 @@ class Region:
         return inputs
 
     def site(self, row, col):
-        site = self.sites[row * self.width + col]
+        site = self.sites[row * self.wh[0] + col]
         return site
 
 

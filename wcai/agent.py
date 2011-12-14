@@ -126,6 +126,7 @@ class Surveying(Component):
             if o > bo:
                 bo = o
                 bi = i
+        print "Chose %s (%s)" % (bi, bo)
         return bi
 
         tot_out = reduce(lambda x, y: x + y, outputs)
@@ -149,15 +150,20 @@ class Surveying(Component):
     def _choose(self, region, scale):
         if scale == 1:
             i = self._choose_nn(region)
-            c = (i % region.width, i / region.height)
-            x = region.center[0] - region.size[0] / 2 + c[0]
-            y = region.center[1] - region.size[1] / 2 + c[1]
-            return x, y
+            return region.pos + region.coords(i)
 
         r = Region.reduce(region, scale)
         i = self._choose_nn(r)
-        map = Region.map(region.field, Surveying.val_funcs, r.center,
-                         (region.width / 2, region.height / 2))
+
+        # map to field coordinates
+        c = region.pos + r.coords(i) * ([scale] * 2) + ([scale / 2] * 2)
+
+        # zoom in on the subsequent region, keeping its border in bounds
+        w, h = np.array(region.wh) / 2
+        x = min(max(0, c[0] - w / 2), region.field.getWidth() - w - 1)
+        y = min(max(0, c[1] - h / 2), region.field.getHeight() - h - 1)
+
+        map = Region.map(region.field, Surveying.val_funcs, (x, y), (w, h))
         return self._choose(map, scale / 2)
 
     def choose(self, field):
@@ -188,8 +194,12 @@ class Sales(Component):
 class Probability(Component):
     """Theorize a probability distribution"""
     name = 'probability'
-    inputs = 80 * 24
-    outputs = 80 * 24
+    inputs = 30
+    outputs = 30
+    val_funcs = [OilProbability(theme, 30, normalize=True)]
+
+    def theorize(self, field, scale):
+        pass
 
 
 class DrillCost(Component):
