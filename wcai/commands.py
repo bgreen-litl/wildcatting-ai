@@ -2,15 +2,16 @@ import logging
 
 from wildcatting.theme import DefaultTheme
 
-from .data import Simulator, Region, OilProbability
-from .agent import (Agent, Surveying, Report, Drilling, Sales, Probability,
-                    DrillCost)
+from .data import Simulator, Region, OilProbability, DrillCost
+from .agent import (Agent, Surveying, Report, Drilling, Sales,
+                    ProbabilityPrediction, DrillCostPrediction)
 
 
 log = logging.getLogger("wcai")
 
 components = dict([(c.name, c) for c in [Surveying, Report, Drilling, Sales,
-                                         Probability, DrillCost]])
+                                         ProbabilityPrediction,
+                                         DrillCostPrediction]])
 
 
 class InitCommand:
@@ -85,13 +86,14 @@ class SimulateCommand:
         sim = Simulator(theme)
         field = sim.field(args.width, args.height)
         site_ct = args.width * args.height
-        region = Region.map(field, val_funcs=[OilProbability(theme, site_ct,
-                                                             normalize=True)])
+        vfs = [OilProbability(theme, site_ct=site_ct, normalize=True),
+               DrillCost(theme, site_ct, True)]
+        region = Region.map(field, val_funcs=vfs)
         if args.visualize:
             print region
         col, row = comp.choose(field)
         site = field.getSite(row, col)
-        print (col, row), '->', site.getProbability()
+        print (col, row), '->', site.getProbability(), site.getDrillCost()
 
 
 class LearnCommand:
