@@ -101,10 +101,8 @@ class Surveying(Component):
         r = Region.reduce(region, scale)
         print r
         i = self._choose_nn(r)
-
         # map to field coordinates
         c = region.pos + r.coords(i) * ([scale] * 2) + ([scale / 2] * 2)
-
         # zoom in on the subsequent region, keeping its border in bounds
         w, h = np.array(region.wh) / 2
         x = min(max(0, c[0] - w / 2), region.field.getWidth() - w - 1)
@@ -118,25 +116,6 @@ class Surveying(Component):
         map = Region.map(field, Surveying.val_funcs)
         coords = self._choose(map, 8)
         return coords
-
-    @staticmethod
-    def highest_prob(field):
-        """Choose the site with the highest known probability"""
-        bp = 0
-        w = field.getWidth()
-        h = field.getHeight()
-        # Consider all the sites, but don't favor the upper left
-        start_row = random.randint(0, h)
-        start_col = random.randint(0, w)
-        for row in xrange(start_row, start_row + h):
-            for col in xrange(start_col, start_col + w):
-                site = field.getSite(row % h, col % w)
-                if site.isSurveyed():
-                    p = site.getProbability()
-                    if p > bp:
-                        bc = (col % w, row % h)
-                        bp = p
-        return bc
 
 
 class Report(Component):
