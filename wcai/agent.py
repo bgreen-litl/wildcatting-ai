@@ -13,49 +13,6 @@ from .data import OilProbability, DrillCost, Region
 theme = DefaultTheme()
 
 
-class Agent:
-    @staticmethod
-    def init(dir):
-        agent = Agent(dir)
-        agent.surveying = Surveying.init(dir)
-        agent.report = Report.init(dir)
-        agent.drilling = Drilling.init(dir)
-        agent.sales = Sales.init(dir)
-        agent.probabilty = ProbabilityPrediction.init(dir)
-        agent.drill_cost = DrillCostPrediction.init(dir)
-        return agent
-
-    @staticmethod
-    def load(dir):
-        agent = Agent(dir)
-        agent.surveying = Surveying.load(dir)
-        agent.report = Surveying.load(dir)
-        agent.drilling = Drilling.load(dir)
-        agent.sales = Sales.load(dir)
-        agent.probability = ProbabilityPrediction.load(dir)
-        agent.drill_cost = DrillCostPrediction.load(dir)
-        return agent
-
-    def __init__(self, dir):
-        self.dir = dir
-
-    def save(self):
-        self.surveying.save(self.dir)
-        self.report.save(self.dir)
-        self.drilling.save(self.dir)
-        self.sales.save(self.dir)
-        self.probability.save(self.dir)
-        self.drill_cost.save(self.dir)
-
-    def learn(self):
-        ## TODO play one billion games
-        pass
-
-    def play(self, hostname, port):
-        ## TODO connect to a game a play mercilessly
-        pass
-
-
 # Components are decision making entities which are currently all backed by
 # neural networks. The Component object provides a common interface for
 # initializing, saving, loading and training these components. While the RL
@@ -248,4 +205,33 @@ class DrillCostPrediction(Component):
     outputs = 30
 
     def theorize(self, field):
+        pass
+
+
+class Agent:
+    cmps = [Surveying, Report, Drilling, Sales, ProbabilityPrediction,
+            DrillCostPrediction]
+
+    @staticmethod
+    def init(dir):
+        return Agent(dir, dict([(c.name, c.init(dir)) for c in Agent.cmps]))
+
+    @staticmethod
+    def load(dir):
+        return Agent(dir, dict([(c.name, c.load(dir)) for c in Agent.cmps]))
+
+    def __init__(self, dir, comps):
+        self.dir = dir
+        self.comps = comps
+        self.__dict__.update(comps)
+
+    def save(self):
+        map(lambda x: x.save(self.dir), self.comps.values())
+
+    def learn(self):
+        ## TODO play one billion games
+        pass
+
+    def play(self, hostname, port):
+        ## TODO connect to a game a play mercilessly
         pass
