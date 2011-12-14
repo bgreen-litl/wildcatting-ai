@@ -131,38 +131,6 @@ class Surveying(Component):
         i = np.argmax(outputs)
         print "Chose %s (%s)" % (i, outputs[i])
         return i
-#<<<<<<< HEAD:wcai/agent.py
-#
-#        print region
-#        s = np.array([float('%0.3f' % o) for o in outputs])
-#        s.shape = (3, 10)
-#        print s
-
-#        # select the best for now
-#        bi = bo = -1
-#        for i, o in enumerate(outputs):
-#            if o > bo:
-#                bo = o
-#                bi = i
-#        print "Chose %s (%s)" % (bi, bo)
-#        return bi
-
-#        tot_out = reduce(lambda x, y: x + y, outputs)
-
-#        r = random.uniform(0, 1)
-#        t = 0
-#        for i, o in enumerate(outputs):
-#            t += o / tot_out
-#            if r <= t:
-#                break
-
-#        s = np.array([float('%0.3f' % o) for o in outputs])
-#        s.shape = (3, 10)
-#        print s
-
-#        return i
-#=======
-#>>>>>>> 2bed9da2f80f3189c6cef5dea99478ef36a603b7:wcai/agent.py
 
     # Choose a site to survey from the specified region of the field. The
     # region here is always at 1:1 but varies in size. The scale is the factor
