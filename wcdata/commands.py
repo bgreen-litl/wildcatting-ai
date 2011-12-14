@@ -124,11 +124,9 @@ class FieldWriter:
                                        self.args.delim))
 
     def write_values(self, region, val_funcs, out):
-        for row in xrange(region.height):
-            for col in xrange(region.width):
-                site = region.site(row, col)
-                for vf in val_funcs:
-                    out.write("%s%s" % (site[vf.header], self.args.delim))
+        for site in region.sites:
+            for vf in val_funcs:
+                out.write("%s%s" % (site[vf.header], self.args.delim))
 
     def write(self, out):
         if not self.args.no_headers:
