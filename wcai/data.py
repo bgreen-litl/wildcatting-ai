@@ -250,28 +250,18 @@ class UtilityEstimator(ValueFunction):
         oil = site.getOilFlag()
 
         # drill to the oil or to the bottom whichever comes first
-        # normalize against max_oil so expense and income are on same scale
         expense = cost * pot * 10.0 if oil else cost * 100.0
 
         # estimated max income that could be obtained from a real spindletop
-        # assumptions:
-        #     reservoir could be at most 1/8 of the field size
-        #     peak oil (very rough formulation)
-        #     reserves would average out to the per site mean
         mean_reserves = self.theme.getMeanSiteReserves()
-        max_oil = self.site_ct / 8 / 2.0 * mean_reserves * price / (scale ** 2)
 
         expected = 0
         if site.getReservoir():
             reservoir = site.getReservoir()
-            reserves = reservoir.getReserves()
+            expected = reservoir.getReserves() * price
 
-            size = reservoir._size
-
-            # oil price, rough peak oil, normalize against max_oil. take the
-            # min in case our max_oil estimation turns out to be too low
-            expected = min(size / 2.0 * reserves * price, max_oil)
-
-        utility = (expected - expense) / max_oil
+        # tanh serves as a squashing function for towards max_oil
+        max_oil = 5 * mean_reserves * price
+        utility = np.tanh((expected - expense) / max_oil)
 
         return utility
