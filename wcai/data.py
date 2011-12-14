@@ -10,7 +10,7 @@ rnd = random.Random()
 
 
 def normalize(val, min_val, max_val, min_norm=-1, max_norm=1):
-    return (((val - min_val) / (max_val - min_val)) * 
+    return (((val - min_val) / (max_val - min_val)) *
             (max_norm - min_norm) + min_norm)
 
 
