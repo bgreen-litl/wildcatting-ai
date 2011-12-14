@@ -115,18 +115,18 @@ class FieldWriter:
         # inputs
         for site in xrange(site_ct):
             for i in self.ins:
-                out.write("%s_%s%s" % (i.header.upper(), site,
+                out.write("%s_%s%s" % (i.key.upper(), site,
                                        self.args.delim))
         # outputs
         for site in xrange(site_ct):
             for o in self.outs:
-                out.write("%s_%s%s" % (o.header.upper(), site,
+                out.write("%s_%s%s" % (o.key.upper(), site,
                                        self.args.delim))
 
     def write_values(self, region, val_funcs, out):
         for site in region.sites:
             for vf in val_funcs:
-                out.write("%s%s" % (site[vf.header], self.args.delim))
+                out.write("%s%s" % (site[vf.key], self.args.delim))
 
     def write(self, out):
         if not self.args.no_headers:

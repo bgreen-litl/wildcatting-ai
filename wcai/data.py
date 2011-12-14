@@ -48,7 +48,7 @@ class Region:
                 site = field.getSite(row, col)
                 vals = {}
                 for vf in val_funcs:
-                    vals[vf.header.lower()] = vf.value(site)
+                    vals[vf.key] = vf.value(site)
                 region.sites.append(vals)
         return region
 
@@ -70,7 +70,7 @@ class Region:
                     site = field.getSite(row, col)
                     vals = {}
                     for vf in val_funcs:
-                        vals[vf.header] = vf.value(site, scale)
+                        vals[vf.key] = vf.value(site, scale)
                     part.sites.append(vals)
             parts.append(part)
         return parts
@@ -155,7 +155,7 @@ class ValueFunction:
 
 
 class OilProbability(ValueFunction):
-    header = "prob"
+    key = "prob"
 
     def value(self, site, scale=1):
         prob = site.getProbability()
@@ -165,7 +165,7 @@ class OilProbability(ValueFunction):
 
 
 class DrillCost(ValueFunction):
-    header = "cost"
+    key = "cost"
 
     def value(self, site, scale=1):
         cost = site.getDrillCost()
@@ -176,7 +176,7 @@ class DrillCost(ValueFunction):
 
 
 class Taxes(ValueFunction):
-    header = "tax"
+    key = "tax"
 
     def value(self, site, scale=1):
         tax = site.getTax()
@@ -187,7 +187,7 @@ class Taxes(ValueFunction):
 
 # TODO normalization
 class OilValue(ValueFunction):
-    header = "val"
+    key = "val"
 
     def value(self, site, scale=1):
         price = self.theme.getOilPrices()._price
@@ -200,7 +200,7 @@ class OilValue(ValueFunction):
 
 # TODO normalization
 class OilReserves(ValueFunction):
-    header = "bbl"
+    key = "bbl"
 
     def value(self, site, scale=1):
         reserves = 0
@@ -211,14 +211,14 @@ class OilReserves(ValueFunction):
 
 
 class OilPresence(ValueFunction):
-    header = "wet"
+    key = "wet"
 
     def value(self, site, scale=1):
         return 0.0 if site.getReservoir() is None else 1.0
 
 
 class ReservoirSize(ValueFunction):
-    header = "size"
+    key = "size"
 
     def value(self, site, scale=1):
         size = 0
@@ -241,7 +241,7 @@ class ReservoirSize(ValueFunction):
 ## sense this estimate should do a decent job predicting better or worse
 ## sites to survey
 class UtilityEstimator(ValueFunction):
-    header = "util"
+    key = "util"
 
     def value(self, site, scale=1):
         price = self.theme.getOilPrices()._price
