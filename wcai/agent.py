@@ -7,7 +7,7 @@ from os.path import join, exists
 
 from wildcatting.theme import DefaultTheme
 
-from .data import OilProbability, Region
+from .data import OilProbability, DrillCost, Region
 
 
 theme = DefaultTheme()
@@ -21,8 +21,8 @@ class Agent:
         agent.report = Report.init(dir)
         agent.drilling = Drilling.init(dir)
         agent.sales = Sales.init(dir)
-        agent.probabilty = Probability.init(dir)
-        agent.drill_cost = DrillCost.init(dir)
+        agent.probabilty = ProbabilityPrediction.init(dir)
+        agent.drill_cost = DrillCostPrediction.init(dir)
         return agent
 
     @staticmethod
@@ -32,8 +32,8 @@ class Agent:
         agent.report = Surveying.load(dir)
         agent.drilling = Drilling.load(dir)
         agent.sales = Sales.load(dir)
-        agent.probability = Probability.load(dir)
-        agent.drill_cost = DrillCost.load(dir)
+        agent.probability = ProbabilityPrediction.load(dir)
+        agent.drill_cost = DrillCostPrediction.load(dir)
         return agent
 
     def __init__(self, dir):
@@ -117,15 +117,16 @@ class Surveying(Component):
     """Responsible for selecting a site to survey"""
     name = 'surveying'
     # TODO incorporate drill cost input and expected utility output
-    inputs = 30  # prob
+    inputs = 60  # prob cost
     outputs = 30  # reservoir size for now
-    val_funcs = [OilProbability(theme, 80 * 24, normalize=True)]
+    val_funcs = [OilProbability(theme, 80 * 24, normalize=True),
+                 DrillCost(theme, 80 * 24, normalize=True)]
 
     # Select the site to survey from a region of the correct size to apply
     # directly to the NN. Chooses the site which corresponds to the highest
     # output value of the NN.
     def _choose_nn(self, region):
-        inputs = region.inputs(['prob'])
+        inputs = region.inputs(['prob', 'cost'])
         outputs = self.nn.sim([inputs])[0]
         print outputs
         i = np.argmax(outputs)
@@ -229,7 +230,7 @@ class Sales(Component):
 #      outputs for each region that overlaps it. (weights are based on number
 #      of surveyed sites in the region)
 #  - profit
-class Probability(Component):
+class ProbabilityPrediction(Component):
     """Theorize a probability distribution"""
     name = 'probability'
     inputs = 30
@@ -240,7 +241,7 @@ class Probability(Component):
         pass
 
 
-class DrillCost(Component):
+class DrillCostPrediction(Component):
     """Theorize a drill cost distribution"""
     name = 'drill_cost'
     inputs = 30
