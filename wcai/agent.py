@@ -74,8 +74,8 @@ class Surveying(Component):
     """Responsible for selecting a site to survey"""
     name = 'surveying'
     # TODO incorporate drill cost input and expected utility output
-    inputs = 60  # prob cost
-    outputs = 30  # reservoir size for now
+    inputs = 60  # prob, cost
+    outputs = 30
     val_funcs = [OilProbability(theme, 80 * 24, normalize=True),
                  DrillCost(theme, 80 * 24, normalize=True)]
 
@@ -181,7 +181,7 @@ class Sales(Component):
 # Once trained, a full probability distribution can be theorized based on a
 # gameplay field with a subset of sites surveyed, by the following algorithm.
 #
-#  - generate 50% overlapping (in both directions) to cover the whole field
+#  - generate 50% overlapping regions (both directions) to cover whole field
 #  - apply each such region to the backing autoassociative NN
 #  - update each site in the field according to a weighted average from the NN
 #      outputs for each region that overlaps it. (weights are based on number
