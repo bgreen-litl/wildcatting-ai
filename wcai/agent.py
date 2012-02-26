@@ -6,6 +6,9 @@ import neurolab as nl
 from os.path import join, exists
 
 from wildcatting.theme import DefaultTheme
+from wildcatting.game import Game
+from wildcatting.model import Player, Well
+
 
 from .data import OilProbability, DrillCost, Region
 
@@ -85,9 +88,9 @@ class Surveying(Component):
     def _choose_nn(self, region):
         inputs = region.inputs(['prob', 'cost'])
         outputs = self.nn.sim([inputs])[0]
-        print outputs
+        #print outputs
         i = np.argmax(outputs)
-        print "Chose %s (%s)" % (i, outputs[i])
+        #print "Chose %s (%s)" % (i, outputs[i])
         return i
 
     # Choose a site to survey from the specified region of the field. The
@@ -99,7 +102,7 @@ class Surveying(Component):
             return region.pos + region.coords(i)
 
         r = Region.reduce(region, scale)
-        print r
+        #print r
         i = self._choose_nn(r)
         # map to field coordinates
         c = region.pos + r.coords(i) * ([scale] * 2) + ([scale / 2] * 2)
@@ -121,8 +124,13 @@ class Surveying(Component):
 class Report(Component):
     """Responsible for deciding whether to drill given a Surveyor's Report"""
     name = 'report'
-    inputs = 4   # prob, cost, tax
+    inputs = 3   # prob, cost, tax
     outputs = 2  # expected utility of drilling and of not drilling
+
+    def choose(self, site):
+        inputs = [site.getProbability(), site.getDrillCost(), site.getTax()]
+        outputs = self.nn.sim([inputs])[0]
+        return np.argmax(outputs) == 0
 
 
 class Drilling(Component):
@@ -131,12 +139,23 @@ class Drilling(Component):
     inputs = 3   # cost, depth, expected depth
     outputs = 2  # expected utiltiy of drilling and of not drilling
 
+    def choose(self, cost, depth, expected):
+        inputs = [cost, depth, expected]
+        outputs = self.nn.sim([inputs])[0]
+        return np.argmax(outputs) == 0
+
 
 class Sales(Component):
     """Responsible for deciding whether to sell a given well"""
     name = 'sales'
     inputs = 3   # income, tax, age
     outputs = 2  # expected utility of selling and of not selling
+
+    def choose(self, site):
+        well = site.getWell()
+        inputs = [well.getOutput(), site.getTax(), well.getWeek()]
+        outputs = self.nn.sim([inputs])[0]
+        return np.argmax(outputs) == 0
 
 
 # The Probability and DrillCost components are backed by autoassociative
@@ -207,9 +226,63 @@ class Agent:
     def save(self):
         map(lambda x: x.save(self.dir), self.comps.values())
 
-    def learn(self):
+    def learn(self, width=80, height=24, turnCount=52):
         ## TODO play one billion games
-        pass
+        for i in xrange(turnCount):
+            game = Game(width, height, turnCount, theme)
+            clientId = game._newClientId()
+            player = Player(self.dir, self.dir[0])
+            secret = game.addPlayer(clientId, player)
+            game.start()
+            field = game.getOilField()
+            col, row = self.surveying.choose(field)
+            site = field.getSite(row, col)
+            site.setSurveyed(True)
+            week = game.getWeek()
+            turn = week.getPlayerTurn(player)
+            turn.setSurveyedSite(site)
+            game.markSiteUpdated(player, site)
+            game.getWeek().endSurvey(player)
+
+            # decide whether to erect a well
+            if self.report.choose(site):
+                print 'Erecting a well!'
+                well = Well()
+                well.setPlayer(player)
+                well.setWeek(game.getWeek().getWeekNum())
+                site.setWell(well)
+                game.drill(row, col)
+                turn.setFieldOpsSite(site)
+                game.markSiteUpdated(player, site)
+
+                depth = 1
+                while self.drilling.choose(site.getDrillCost(), depth, 10):
+                    print 'DRILLING'
+                    depth += 1
+                    foundOil = game.drill(row, col)
+                    if foundOil:
+                        print 'STRUCK OIL!'
+                        break
+                    if depth == 10:
+                        print 'DRY HOLE!'
+                        break
+                print 'Done Drilling'
+            else:
+                print 'Deciding not to erect a well.'
+
+            for row in xrange(field.getHeight()):
+                for col in xrange(field.getWidth()):
+                    site = field.getSite(row, col)
+                    well = site.getWell()
+                    if well:
+                        if well.getPlayer().getUsername() == self.dir:
+                            if self.sales.choose(site):
+                                print 'SELLING THIS WELL'
+        
+            game.endTurn(player)
+            sum = game.getWeeklySummary()
+            for r in sum.getReportRows():
+                print 'Profit and loss', r['profitAndLoss']
 
     def play(self, hostname, port):
         ## TODO connect to a game a play mercilessly

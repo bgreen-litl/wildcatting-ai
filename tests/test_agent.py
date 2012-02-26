@@ -8,11 +8,28 @@ from wildcatting.game import (Filler, OilFiller, DrillCostFiller,
 from wildcatting.theme import DefaultTheme
 
 from wcai.agent import Agent, Surveying, Report, Drilling, Sales
+from wcai.data import Region
 
 
 # Bud Brigham is a geophysicist who believed in technology.
 # He rode high and he fell hard.
 dir = 'bud'
+
+
+class OilMountainFiller(OilFiller):
+    def getMaxPeaks(self):
+        return 1
+    
+    def _generatePeaks(self, model):
+        return [(40, 12)]
+
+
+theme = DefaultTheme()
+field = OilField(80, 24)
+OilMountainFiller(theme).fill(field)
+DrillCostFiller(theme).fill(field)
+PotentialOilDepthFiller(theme).fill(field)
+ReservoirFiller(theme).fill(field)
 
 
 class AgentTest(unittest.TestCase):
@@ -23,6 +40,8 @@ class AgentTest(unittest.TestCase):
         self.assertTrue(exists(join(dir, 'report')))
         self.assertTrue(exists(join(dir, 'drilling')))
         self.assertTrue(exists(join(dir, 'sales')))
+        self.assertTrue(exists(join(dir, 'probability')))
+        self.assertTrue(exists(join(dir, 'drill_cost')))
 
     def test_load(self):
         agent = Agent.load(dir)
@@ -52,6 +71,12 @@ class SurveyingTest(unittest.TestCase):
 
         coords = surveying.choose(field)
         ## TODO some tests on the results
+
+        surveying = Surveying.load(dir)
+        region = Region.map(field)
+        print region
+        coords = surveying.choose(field)
+        self.assertEquals((coords[0], coords[1]), (40, 12))
         
 
 class ReportTest(unittest.TestCase):
