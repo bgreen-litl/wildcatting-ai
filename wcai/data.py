@@ -31,7 +31,10 @@ class Simulator:
 
 class Region:
     @staticmethod
-    def map(field, val_funcs=[], pos=(0, 0), size=None):
+    def map(field, val_funcs=None, pos=(0, 0), size=None):
+        if not val_funcs:
+            val_funcs = []
+
         if not size:
             size = (field.getWidth(), field.getHeight())
 

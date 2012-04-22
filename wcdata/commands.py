@@ -59,7 +59,7 @@ class FieldCommand:
                                help="oil field width")
         subparser.add_argument("--height", default=24, type=int,
                                help="oil field height")
-        subparser.add_argument("--num", default=1,  type=int,
+        subparser.add_argument("--num", default=1, type=int,
                                help="number of fields to generate")
         subparser.add_argument("--no-headers", action="store_true")
         subparser.add_argument("--delim", default=" ", type=str,

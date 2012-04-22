@@ -1,5 +1,4 @@
 import os
-import random
 import numpy as np
 import neurolab as nl
 
@@ -232,7 +231,7 @@ class Agent:
             game = Game(width, height, turnCount, theme)
             clientId = game._newClientId()
             player = Player(self.dir, self.dir[0])
-            secret = game.addPlayer(clientId, player)
+            game.addPlayer(clientId, player)
             game.start()
             field = game.getOilField()
             col, row = self.surveying.choose(field)
@@ -278,7 +277,7 @@ class Agent:
                         if well.getPlayer().getUsername() == self.dir:
                             if self.sales.choose(site):
                                 print 'SELLING THIS WELL'
-        
+
             game.endTurn(player)
             sum = game.getWeeklySummary()
             for r in sum.getReportRows():
