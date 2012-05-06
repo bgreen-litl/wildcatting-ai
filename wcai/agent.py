@@ -8,8 +8,7 @@ from wildcatting.theme import DefaultTheme
 from wildcatting.game import Game
 from wildcatting.model import Player, Well
 
-
-from .data import OilProbability, DrillCost, Region
+from .data import OilProbability, DrillCost, Region, normalize
 
 
 theme = DefaultTheme()
@@ -28,6 +27,8 @@ theme = DefaultTheme()
 # inputs may be inserted with the weights for those inputs learned only
 # through RL.
 class Component:
+    learning_rate = 0.01
+
     @classmethod
     def init(cls, agent):
         comp = cls(join(agent, cls.name))
@@ -37,7 +38,7 @@ class Component:
             os.makedirs(training_dir)
 
         hiddens = int(2 * (cls.inputs + cls.outputs) / 3.0)
-        comp.nn = nl.net.newff([[0.0, 1.0]] * cls.inputs,
+        comp.nn = nl.net.newff([[-1.0, 1.0]] * cls.inputs,
                                [hiddens, cls.outputs])
         nl.init.init_rand(comp.nn.layers[0])
         nl.init.init_rand(comp.nn.layers[1])
@@ -71,6 +72,18 @@ class Component:
                              goal=goal)
         self.nn.save(join(self.dir, 'utility.net'))
 
+    def reward(self, reward, val_):
+        """Reward the previous choice given its reward"""
+        print "Reward %s with %s" % (self.name, reward)
+        val = np.amax(self._outputs)
+        delta = reward + 0.1 * val_ - val
+        grad = nl.tool.ff_grad(self.nn,
+                               [self._inputs],
+                               [val + delta])[0]
+
+        for ln, layer in enumerate(self.nn.layers):
+            layer.np['w'] -= self.learning_rate * grad[ln]['w']
+            layer.np['b'] -= self.learning_rate * grad[ln]['b']
 
 class Surveying(Component):
     """Responsible for selecting a site to survey"""
@@ -85,24 +98,21 @@ class Surveying(Component):
     # directly to the NN. Chooses the site which corresponds to the highest
     # output value of the NN.
     def _choose_nn(self, region):
+        # save last inputs, outputs so we can learn based on them
         inputs = region.inputs(['prob', 'cost'])
         outputs = self.nn.sim([inputs])[0]
-        #print outputs
-        i = np.argmax(outputs)
-        #print "Chose %s (%s)" % (i, outputs[i])
-        return i
+        return inputs, outputs, np.argmax(outputs), np.amax(outputs)
 
     # Choose a site to survey from the specified region of the field. The
     # region here is always at 1:1 but varies in size. The scale is the factor
     # by which the region must be reduced in order to apply the NN.
     def _choose(self, region, scale):
         if scale == 1:
-            i = self._choose_nn(region)
-            return region.pos + region.coords(i)
+            inputs, outputs, i, best = self._choose_nn(region)
+            return inputs, outputs, (region.pos + region.coords(i)), best
 
         r = Region.reduce(region, scale)
-        #print r
-        i = self._choose_nn(r)
+        inputs, outputs, i, best = self._choose_nn(r)
         # map to field coordinates
         c = region.pos + r.coords(i) * ([scale] * 2) + ([scale / 2] * 2)
         # zoom in on the subsequent region, keeping its border in bounds
@@ -116,8 +126,16 @@ class Surveying(Component):
     def choose(self, field):
         """Choose a site to survey in the specified field based on nn output"""
         map = Region.map(field, Surveying.val_funcs)
-        coords = self._choose(map, 8)
+        inputs, outputs, coords, best = self._choose(map, 8)
+        self._inputs = inputs
+        self._outputs = outputs
         return coords
+
+    def best(self, field):
+        map = Region.map(field, Surveying.val_funcs)
+        inputs, outputs, coords, best = self._choose(map, 8)
+        print 'best', best
+        return best
 
 
 class Report(Component):
@@ -127,21 +145,36 @@ class Report(Component):
     outputs = 2  # expected utility of drilling and of not drilling
 
     def choose(self, site):
+        self._inputs = [site.getProbability(), site.getDrillCost(), site.getTax()]
+        self._outputs = self.nn.sim([self._inputs])[0]
+        return np.argmax(self._outputs) == 0
+
+    def best(self, site):
         inputs = [site.getProbability(), site.getDrillCost(), site.getTax()]
         outputs = self.nn.sim([inputs])[0]
-        return np.argmax(outputs) == 0
+        return np.amax(outputs)
 
 
 class Drilling(Component):
     """Responsible for deciding whether to drill 10 more meters"""
     name = 'drilling'
     inputs = 3   # cost, depth, expected depth
-    outputs = 2  # expected utiltiy of drilling and of not drilling
+    outputs = 2  # expected utility of drilling and of not drilling
 
     def choose(self, cost, depth, expected):
+        print
+        print 'Drilling choose:'
+        self._inputs = [cost, depth, expected]
+        self._outputs = self.nn.sim([self._inputs])[0]
+        print 'self._inputs', self._inputs
+        print 'self._outputs', self._outputs
+        print
+        return np.argmax(self._outputs) == 0
+
+    def best(self, cost, depth, expected):
         inputs = [cost, depth, expected]
         outputs = self.nn.sim([inputs])[0]
-        return np.argmax(outputs) == 0
+        return np.amax(outputs)
 
 
 class Sales(Component):
@@ -152,9 +185,16 @@ class Sales(Component):
 
     def choose(self, site):
         well = site.getWell()
+        output = well.getOutput() or 0
+        self._inputs = [output, site.getTax(), well.getWeek()]
+        self._outputs = self.nn.sim([self._inputs])[0]
+        return np.argmax(self._outputs) == 0
+
+    def best(self, site):
+        well = site.getWell()
         inputs = [well.getOutput(), site.getTax(), well.getWeek()]
         outputs = self.nn.sim([inputs])[0]
-        return np.argmax(outputs) == 0
+        return np.amax(outputs)
 
 
 # The Probability and DrillCost components are backed by autoassociative
@@ -226,7 +266,7 @@ class Agent:
         map(lambda x: x.save(self.dir), self.comps.values())
 
     def learn(self, width=80, height=24, turnCount=52):
-        ## TODO play one billion games
+        last_reward = 0
         for i in xrange(turnCount):
             game = Game(width, height, turnCount, theme)
             clientId = game._newClientId()
@@ -234,9 +274,18 @@ class Agent:
             game.addPlayer(clientId, player)
             game.start()
             field = game.getOilField()
+
+            if i > 0:
+                r = normalize(last_reward, -20000, 20000)
+                self.sales.reward(r, self.surveying.best(field))
+
             col, row = self.surveying.choose(field)
             site = field.getSite(row, col)
             site.setSurveyed(True)
+
+            # reward for surveying choice
+            self.surveying.reward(0, self.report.best(site))
+
             week = game.getWeek()
             turn = week.getPlayerTurn(player)
             turn.setSurveyedSite(site)
@@ -245,6 +294,9 @@ class Agent:
 
             # decide whether to erect a well
             if self.report.choose(site):
+
+                self.report.reward(0, self.drilling.best(site.getDrillCost(), 0, 10))
+
                 print 'Erecting a well!'
                 well = Well()
                 well.setPlayer(player)
@@ -256,6 +308,14 @@ class Agent:
 
                 depth = 1
                 while self.drilling.choose(site.getDrillCost(), depth, 10):
+                    print 'site.drillCost', site.getDrillCost()
+                    r = normalize(0 - site.getDrillCost(),
+                                   theme.getMinDrillCost(),
+                                   theme.getMaxDrillCost())
+                    print 'r', theme.getMinDrillCost(), theme.getMaxDrillCost(), r
+                    b = self.drilling.best(site.getDrillCost(), depth, 10)
+                    self.drilling.reward(r, b)
+                                         
                     print 'DRILLING'
                     depth += 1
                     foundOil = game.drill(row, col)
@@ -276,12 +336,21 @@ class Agent:
                     if well:
                         if well.getPlayer().getUsername() == self.dir:
                             if self.sales.choose(site):
-                                print 'SELLING THIS WELL'
+                                print 'SELLING THIS WELL: %s' % (well._initialCost / 2)
+                                r = normalize(well._initialCost,
+                                              theme.getMinDrillCost() * 10,
+                                              theme.getMaxDrillCost() * 10)
+                                b = self.sales.best(site)
+                                self.drilling.reward(r, b)
+                            else:
+                                print 'KEEPING this well: 0'
+                                self.drilling.reward(0,
+                                                     self.sales.best(site))
 
             game.endTurn(player)
             sum = game.getWeeklySummary()
-            for r in sum.getReportRows():
-                print 'Profit and loss', r['profitAndLoss']
+            profit = sum.getReportRows()[0]["profitAndLoss"]
+            last_reward = profit - last_reward
 
     def play(self, hostname, port):
         ## TODO connect to a game a play mercilessly

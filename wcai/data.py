@@ -6,13 +6,14 @@ from wildcatting.model import OilField
 from wildcatting.game import (OilFiller, PotentialOilDepthFiller,
                               ReservoirFiller, DrillCostFiller, TaxFiller)
 
-
 rnd = random.Random()
 
 
 def normalize(val, min_val, max_val, min_norm=-1, max_norm=1):
-    return (((val - min_val) / (max_val - min_val)) *
-            (max_norm - min_norm) + min_norm)
+    n = (((val - min_val) / (max_val - min_val)) *
+         (max_norm - min_norm) + min_norm)
+    print 'normalize', val, min_val, max_val, n
+    return n
 
 
 class Simulator:
