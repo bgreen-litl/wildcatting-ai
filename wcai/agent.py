@@ -55,6 +55,10 @@ class Component:
     def __init__(self, dir):
         self.dir = dir
 
+        # last input and output
+        self._inputs = None
+        self._outputs = None
+
     def save(self):
         self.nn.save(join(self.dir, 'utility.net'))
 
@@ -74,6 +78,9 @@ class Component:
 
     def reward(self, reward, val_):
         """Reward the previous choice given its reward"""
+        if self._outputs == None:
+            return
+
         print "Reward %s with %s" % (self.name, reward)
         val = np.amax(self._outputs)
         delta = reward + 0.1 * val_ - val
