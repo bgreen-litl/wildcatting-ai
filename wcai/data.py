@@ -9,10 +9,9 @@ from wildcatting.game import (OilFiller, PotentialOilDepthFiller,
 rnd = random.Random()
 
 
-def normalize(val, min_val, max_val, min_norm=-1, max_norm=1):
-    n = (((val - min_val) / (max_val - min_val)) *
+def normalize(val, min_val, max_val, min_norm=-1., max_norm=1.):
+    n = (((float(val) - min_val) / (max_val - min_val)) *
          (max_norm - min_norm) + min_norm)
-    print 'normalize', val, min_val, max_val, n
     return n
 
 
